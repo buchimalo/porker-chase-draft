@@ -77,3 +77,23 @@
     }
 }
 
+/* モーダル内の結果表示用スタイル */
+#resultsModal .card {
+    height: 100%;
+    margin-bottom: 1rem;
+}
+
+#resultsModal .card-header {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+#resultsModal .list-group-item {
+    background-color: transparent;
+}
+
+@media (max-width: 768px) {
+    #resultsModal .col-md {
+        margin-bottom: 1rem;
+    }
+}
+
