@@ -1,7 +1,6 @@
 // js/team-sheet.js
 const db = firebase.database();
 let currentTeamId = null;
-let currentRound = 1;
 
 // チームIDをURLから取得
 function getTeamIdFromUrl() {
@@ -9,13 +8,20 @@ function getTeamIdFromUrl() {
     return urlParams.get('team');
 }
 
-// チーム情報の初期化
+// チーム情報の初期化（修正）
 function initializeTeamSheet() {
     currentTeamId = getTeamIdFromUrl();
     if (!currentTeamId) {
         alert('チームIDが指定されていません');
         return;
     }
+
+    // 巡目の監視を追加
+    const currentRoundRef = db.ref('draft/currentRound');
+    currentRoundRef.on('value', (snapshot) => {
+        const round = snapshot.val() || 1;
+        document.getElementById('current-round').textContent = round;
+    });
 
     // チーム名の取得と表示
     const teamRef = db.ref(`draft/teams/${currentTeamId}`);
