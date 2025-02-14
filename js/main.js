@@ -14,9 +14,13 @@ function changeRound(delta) {
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
+    console.log('Initializing main screen'); // デバッグ用
+
     // チーム情報を取得
     db.ref('draft/teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
+        console.log('Teams data:', teamsData); // デバッグ用
+        
         if (teamsData) {
             // チェックボックスを更新
             updateTeamCheckboxes(teamsData);
@@ -24,8 +28,11 @@ function initializeMainScreen() {
             // 指名データも取得して表示を更新
             db.ref('draft/nominations').once('value', (nominationsSnapshot) => {
                 const nominationsData = nominationsSnapshot.val() || {};
+                console.log('Nominations data:', nominationsData); // デバッグ用
                 updateDisplay(teamsData, nominationsData);
             });
+        } else {
+            console.error('No teams data available');
         }
     });
 
@@ -50,7 +57,10 @@ function initializeMainScreen() {
 // チーム選択のチェックボックスを更新
 function updateTeamCheckboxes(teamsData) {
     const container = document.querySelector('.lost-teams-checkboxes');
-    if (!container) return;
+    if (!container) {
+        console.error('Checkbox container not found');
+        return;
+    }
 
     container.innerHTML = '';
     Object.entries(teamsData).forEach(([teamId, team]) => {
@@ -71,7 +81,10 @@ function updateDisplay(teamsData, nominationsData) {
 
     // 指名リストの更新
     const nominationsList = document.getElementById('nominations-list');
-    if (!nominationsList) return;
+    if (!nominationsList) {
+        console.error('Nominations list container not found');
+        return;
+    }
 
     nominationsList.innerHTML = '';
     const listGroup = document.createElement('div');
@@ -80,7 +93,7 @@ function updateDisplay(teamsData, nominationsData) {
     Object.entries(teamsData).forEach(([teamId, team]) => {
         const nomination = roundData[teamId];
         const div = document.createElement('div');
-        div.className = 'list-group-item';
+        div.className = `list-group-item team-color-${teamId.replace('team', '')}`;
 
         let playerInfo = '未指名';
         let statusBadge = '';
@@ -129,6 +142,7 @@ function updateHistory(teamsData, nominationsData) {
             if (!team) return;
 
             const row = document.createElement('tr');
+            row.className = `team-color-${teamId.replace('team', '')}`;
             let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
 
             row.innerHTML = `
