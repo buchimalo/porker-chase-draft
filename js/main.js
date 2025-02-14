@@ -10,25 +10,34 @@ function changeRound(delta) {
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    // 巡目を更新
-    currentRoundSpan.textContent = newRound;
-    
-    // データを再読み込み
-    const nominationsRef = db.ref('draft/nominations');
-    nominationsRef.once('value', (snapshot) => {
-        const data = snapshot.val();
-        updateNominationsList(data);
-        updateHistory(data);
+    // 巡目をFirebaseに保存して同期
+    db.ref('draft/currentRound').set(newRound).then(() => {
+        // 巡目を更新
+        currentRoundSpan.textContent = newRound;
+        
+        // データを再読み込み
+        const nominationsRef = db.ref('draft/nominations');
+        nominationsRef.once('value', (snapshot) => {
+            const data = snapshot.val();
+            updateNominationsList(data);
+            updateHistory(data);
+        });
     });
 }
 
-// 現在の指名状況を監視
+// 現在の指名状況を監視（修正）
 function initializeMainScreen() {
+    // 巡目の監視を追加
+    const currentRoundRef = db.ref('draft/currentRound');
+    currentRoundRef.on('value', (snapshot) => {
+        const round = snapshot.val() || 1;
+        document.getElementById('current-round').textContent = round;
+    });
+
     const nominationsRef = db.ref('draft/nominations');
-    
     nominationsRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        console.log('Received data:', data); // デバッグ用
+        console.log('Received data:', data);
         updateNominationsList(data);
         updateHistory(data);
     });
