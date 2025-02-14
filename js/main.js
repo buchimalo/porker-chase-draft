@@ -24,7 +24,7 @@ function initializeMainScreen() {
             updateTeamCheckboxes(teamsData);
             
             // 指名データも取得して表示を更新
-            db.ref('/nominations').once('value', (nominationsSnapshot) => {
+            db.ref('/draft/nominations').once('value', (nominationsSnapshot) => {
                 const nominationsData = nominationsSnapshot.val() || {};
                 updateDisplay(teamsData, nominationsData);
             });
@@ -32,7 +32,7 @@ function initializeMainScreen() {
     });
 
     // 指名データの監視
-    db.ref('/nominations').on('value', (snapshot) => {
+    db.ref('/draft/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val();
         db.ref('/draft/teams').once('value', (teamsSnapshot) => {
             const teamsData = teamsSnapshot.val();
@@ -159,8 +159,8 @@ function setLostTeams() {
     const updates = {};
 
     lostTeams.forEach(teamId => {
-        updates[`nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
-        updates[`nominations/round${currentRound}/${teamId}/canReselect`] = true;
+        updates[`/draft/nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
+        updates[`/draft/nominations/round${currentRound}/${teamId}/canReselect`] = true;
     });
 
     db.ref().update(updates)
