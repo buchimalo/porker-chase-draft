@@ -85,42 +85,4 @@ function updateTeamHistory(nominationsData) {
 
     historyContainer.innerHTML = '';
 
-    Object.entries(nominationsData).forEach(([round, roundData]) => {
-        if (roundData && roundData[currentTeamId]) {
-            const nomination = roundData[currentTeamId];
-            const listItem = document.createElement('div');
-            listItem.className = 'list-group-item';
-            
-            let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
-
-            listItem.innerHTML = `
-                ${round.replace('round', '')}巡目: 
-                <span class="nomination-player ${nomination.status}">
-                    ${nomination.playerName}
-                </span>
-                <span class="badge bg-secondary">${status}</span>
-            `;
-            historyContainer.appendChild(listItem);
-        }
-    });
-}
-
-// アラート表示
-function showAlert(message, type) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    const container = document.querySelector('.nomination-form');
-    container.insertBefore(alertDiv, container.firstChild);
-    
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 3000);
-}
-
-// 画面読み込み時に初期化
-document.addEventListener('DOMContentLoaded', initializeTeamSheet);
+    Object<span class="ml-2" /><span class="inline-block w-3 h-3 rounded-full bg-neutral-a12 align-middle mb-[0.1rem]" />
