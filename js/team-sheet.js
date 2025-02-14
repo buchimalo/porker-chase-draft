@@ -16,9 +16,12 @@ function initializeTeamSheet() {
         return;
     }
 
+    console.log('Initializing team sheet for:', currentTeamId); // デバッグ用
+
     // チーム名の取得と表示
-    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
+    db.ref('draft/teams/' + currentTeamId).on('value', (snapshot) => {
         const teamData = snapshot.val();
+        console.log('Team data:', teamData); // デバッグ用
         if (teamData) {
             document.getElementById('team-name').textContent = teamData.name;
         }
@@ -27,12 +30,14 @@ function initializeTeamSheet() {
     // 巡目の監視
     db.ref('draft/currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
+        console.log('Current round:', round); // デバッグ用
         document.getElementById('current-round').textContent = round;
     });
 
     // 指名履歴の監視
     db.ref('draft/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val();
+        console.log('Nominations data:', nominationsData); // デバッグ用
         updateTeamHistory(nominationsData);
     });
 }
@@ -56,11 +61,11 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
+    db.ref('draft/teams/' + currentTeamId).once('value', (snapshot) => {
         const teamData = snapshot.val();
         const teamName = teamData ? teamData.name : currentTeamId;
         
-        const nominationRef = db.ref(`draft/nominations/round${currentRound}/${currentTeamId}`);
+        const nominationRef = db.ref('draft/nominations/round' + currentRound + '/' + currentTeamId);
         
         nominationRef.set({
             playerName: playerName,
@@ -85,4 +90,42 @@ function updateTeamHistory(nominationsData) {
 
     historyContainer.innerHTML = '';
 
-    Object<span class="ml-2" /><span class="inline-block w-3 h-3 rounded-full bg-neutral-a12 align-middle mb-[0.1rem]" />
+    Object.entries(nominationsData).forEach(([round, roundData]) => {
+        if (roundData && roundData[currentTeamId]) {
+            const nomination = roundData[currentTeamId];
+            const listItem = document.createElement('div');
+            listItem.className = 'list-group-item';
+            
+            let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
+
+            listItem.innerHTML = `
+                ${round.replace('round', '')}巡目: 
+                <span class="nomination-player ${nomination.status}">
+                    ${nomination.playerName}
+                </span>
+                <span class="badge bg-secondary">${status}</span>
+            `;
+            historyContainer.appendChild(listItem);
+        }
+    });
+}
+
+// アラート表示
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.nomination-form');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
+// 画面読み込み時に初期化
+document.addEventListener('DOMContentLoaded', initializeTeamSheet);
