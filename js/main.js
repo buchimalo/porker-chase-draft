@@ -12,27 +12,28 @@ function changeRound(delta) {
     
     // 巡目をFirebaseに保存
     db.ref('draft/currentRound').set(newRound).then(() => {
-        console.log('Round updated to:', newRound); // デバッグ用
+        console.log('Round updated to:', newRound);
     }).catch(error => {
-        console.error('Error updating round:', error); // デバッグ用
+        console.error('Error updating round:', error);
     });
 }
 
-// 現在の指名状況を監視
+// 現在の指名状況を監視（リアルタイム更新）
 function initializeMainScreen() {
     // 巡目の監視
     const currentRoundRef = db.ref('draft/currentRound');
     currentRoundRef.on('value', (snapshot) => {
         const round = snapshot.val() || 1;
         document.getElementById('current-round').textContent = round;
-        
-        // 巡目が変更されたら指名データも再取得
-        const nominationsRef = db.ref('draft/nominations');
-        nominationsRef.once('value', (snapshot) => {
-            const data = snapshot.val();
-            updateNominationsList(data);
-            updateHistory(data);
-        });
+    });
+
+    // 指名データの監視（リアルタイム更新）
+    const nominationsRef = db.ref('draft/nominations');
+    nominationsRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        console.log('Received data:', data);
+        updateNominationsList(data);
+        updateHistory(data);
     });
 }
 
@@ -45,7 +46,7 @@ function updateNominationsList(data) {
 
     const currentRound = document.getElementById('current-round').textContent;
     const roundData = data[`round${currentRound}`];
-    console.log('Current round data:', roundData); // デバッグ用
+    console.log('Current round data:', roundData);
 
     if (roundData) {
         // リストグループのコンテナを作成
@@ -53,7 +54,7 @@ function updateNominationsList(data) {
         listGroup.className = 'list-group';
         
         Object.entries(roundData).forEach(([teamId, nomination]) => {
-            console.log('Processing team:', teamId, nomination); // デバッグ用
+            console.log('Processing team:', teamId, nomination);
             
             const listItem = document.createElement('div');
             listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
@@ -86,11 +87,11 @@ function updateHistory(data) {
     historyBody.innerHTML = '';
 
     if (!data) {
-        console.log('No data for history'); // デバッグ用
+        console.log('No data for history');
         return;
     }
 
-    console.log('Updating history with data:', data); // デバッグ用
+    console.log('Updating history with data:', data);
 
     // 各ラウンドのデータを処理
     Object.keys(data).sort().forEach(round => {
@@ -128,7 +129,7 @@ function setLostTeams() {
     const checkboxes = document.querySelectorAll('input[name="lostTeams"]:checked');
     const lostTeams = Array.from(checkboxes).map(cb => cb.value);
     
-    console.log('Selected teams:', lostTeams); // デバッグ用
+    console.log('Selected teams:', lostTeams);
 
     if (lostTeams.length === 0) {
         alert('抽選負けのチームを選択してください');
@@ -141,7 +142,7 @@ function setLostTeams() {
     // 各チームのステータスを更新
     lostTeams.forEach(teamId => {
         const path = `draft/nominations/round${currentRound}/${teamId}`;
-        console.log('Updating path:', path); // デバッグ用
+        console.log('Updating path:', path);
         
         // 既存のデータを保持しながら状態を更新
         db.ref(path).once('value', (snapshot) => {
@@ -154,7 +155,7 @@ function setLostTeams() {
             
             // 全てのチームの処理が完了したら更新を実行
             if (Object.keys(updates).length === lostTeams.length) {
-                console.log('Final updates:', updates); // デバッグ用
+                console.log('Final updates:', updates);
                 
                 db.ref().update(updates).then(() => {
                     const message = `${lostTeams.length}チームに再指名権を付与しました`;
@@ -163,7 +164,7 @@ function setLostTeams() {
                     // チェックボックスをリセット
                     checkboxes.forEach(cb => cb.checked = false);
                 }).catch(error => {
-                    console.error('Update error:', error); // デバッグ用
+                    console.error('Update error:', error);
                     alert('エラーが発生しました: ' + error.message);
                 });
             }
