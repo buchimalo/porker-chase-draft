@@ -1,59 +1,40 @@
 // js/main.js
 const db = firebase.database();
 
-// デバッグ用のログ関数
-function log(message, data) {
-    console.log(`[DEBUG] ${message}:`, data);
-}
-
 // 巡目変更機能
 function changeRound(delta) {
     const currentRoundSpan = document.getElementById('current-round');
     let newRound = parseInt(currentRoundSpan.textContent) + delta;
     
+    // 1-6巡の範囲内に制限
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    db.ref('currentRound').set(newRound);
+    // 巡目をFirebaseに保存
+    db.ref('/draft/currentRound').set(newRound);
 }
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
-    log('Initializing main screen');
-
-    // データの初期取得
-    Promise.all([
-        db.ref('draft/teams').once('value'),
-        db.ref('nominations').once('value'),
-        db.ref('currentRound').once('value')
-    ]).then(([teamsSnapshot, nominationsSnapshot, roundSnapshot]) => {
-        const teamsData = teamsSnapshot.val();
-        const nominationsData = nominationsSnapshot.val();
-        const currentRound = roundSnapshot.val() || 1;
-
-        log('Initial data loaded', { teamsData, nominationsData, currentRound });
-
-        if (teamsData) {
-            updateTeamCheckboxes(teamsData);
-            updateDisplay(teamsData, nominationsData);
-        }
-
-        document.getElementById('current-round').textContent = currentRound;
-    });
-
-    // リアルタイム監視の設定
-    db.ref('draft/teams').on('value', snapshot => {
+    // チーム情報を取得
+    db.ref('/draft/teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
-        log('Teams updated', teamsData);
         if (teamsData) {
+            // チェックボックスを更新
             updateTeamCheckboxes(teamsData);
+            
+            // 指名データも取得して表示を更新
+            db.ref('/nominations').once('value', (nominationsSnapshot) => {
+                const nominationsData = nominationsSnapshot.val() || {};
+                updateDisplay(teamsData, nominationsData);
+            });
         }
     });
 
-    db.ref('nominations').on('value', snapshot => {
+    // 指名データの監視
+    db.ref('/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val();
-        log('Nominations updated', nominationsData);
-        db.ref('draft/teams').once('value').then(teamsSnapshot => {
+        db.ref('/draft/teams').once('value', (teamsSnapshot) => {
             const teamsData = teamsSnapshot.val();
             if (teamsData) {
                 updateDisplay(teamsData, nominationsData);
@@ -61,17 +42,16 @@ function initializeMainScreen() {
         });
     });
 
-    db.ref('currentRound').on('value', snapshot => {
+    // 巡目の監視
+    db.ref('/draft/currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
-        log('Current round updated', round);
         document.getElementById('current-round').textContent = round;
     });
 }
 
 // チーム選択のチェックボックスを更新
 function updateTeamCheckboxes(teamsData) {
-    log('Updating team checkboxes', teamsData);
-    const container = document.getElementById('team-checkboxes');
+    const container = document.querySelector('.lost-teams-checkboxes');
     if (!container) return;
 
     container.innerHTML = '';
@@ -88,7 +68,6 @@ function updateTeamCheckboxes(teamsData) {
 
 // 画面表示の更新
 function updateDisplay(teamsData, nominationsData) {
-    log('Updating display', { teamsData, nominationsData });
     const currentRound = document.getElementById('current-round').textContent;
     const roundData = nominationsData ? nominationsData[`round${currentRound}`] || {} : {};
 
@@ -135,7 +114,6 @@ function updateDisplay(teamsData, nominationsData) {
 
 // 履歴の更新
 function updateHistory(teamsData, nominationsData) {
-    log('Updating history', { teamsData, nominationsData });
     const historyBody = document.getElementById('history-body');
     if (!historyBody) return;
 
