@@ -7,8 +7,9 @@ function initializeMainScreen() {
     
     nominationsRef.on('value', (snapshot) => {
         const data = snapshot.val();
+        console.log('Received data:', data); // デバッグ用
         updateNominationsList(data);
-        updateHistory(data);  // 履歴の更新を追加
+        updateHistory(data);
     });
 }
 
@@ -21,6 +22,7 @@ function updateNominationsList(data) {
 
     const currentRound = document.getElementById('current-round').textContent;
     const roundData = data[`round${currentRound}`];
+    console.log('Current round data:', roundData); // デバッグ用
 
     if (roundData) {
         // リストグループのコンテナを作成
@@ -58,30 +60,40 @@ function updateHistory(data) {
     const historyBody = document.getElementById('history-body');
     historyBody.innerHTML = '';
 
-    if (!data) return;
+    if (!data) {
+        console.log('No data for history'); // デバッグ用
+        return;
+    }
 
-    // 全ラウンドのデータを処理
-    Object.entries(data).forEach(([round, roundData]) => {
+    console.log('Updating history with data:', data); // デバッグ用
+
+    // 各ラウンドのデータを処理
+    Object.keys(data).sort().forEach(round => {
+        const roundData = data[round];
         const roundNumber = round.replace('round', '');
         
         // そのラウンドの各チームの指名を表示
-        Object.entries(roundData).forEach(([teamId, nomination]) => {
-            const row = document.createElement('tr');
-            
-            let status = '完了';
-            if (nomination.status === 'lost_lottery') {
-                status = '抽選負け';
-            }
+        if (roundData) {
+            Object.entries(roundData).forEach(([teamId, nomination]) => {
+                if (nomination.playerName) { // 指名がある場合のみ表示
+                    const row = document.createElement('tr');
+                    
+                    let status = '完了';
+                    if (nomination.status === 'lost_lottery') {
+                        status = '抽選負け';
+                    }
 
-            row.innerHTML = `
-                <td>${roundNumber}巡目</td>
-                <td>${nomination.teamName}</td>
-                <td>${nomination.playerName}</td>
-                <td>${status}</td>
-            `;
-            
-            historyBody.appendChild(row);
-        });
+                    row.innerHTML = `
+                        <td>${roundNumber}巡目</td>
+                        <td>${nomination.teamName}</td>
+                        <td>${nomination.playerName}</td>
+                        <td>${status}</td>
+                    `;
+                    
+                    historyBody.appendChild(row);
+                }
+            });
+        }
     });
 }
 
