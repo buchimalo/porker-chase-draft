@@ -1,4 +1,4 @@
-// js/main.js
+// js/main.js の前半
 const db = firebase.database();
 
 // 巡目変更機能
@@ -20,6 +20,14 @@ function changeRound(delta) {
 
 // 現在の指名状況を監視（リアルタイム更新）
 function initializeMainScreen() {
+    // チーム情報を取得
+    db.ref('draft/teams').once('value', (snapshot) => {
+        const teamsData = snapshot.val();
+        if (teamsData) {
+            updateTeamSelect(teamsData);
+        }
+    });
+
     // 巡目の監視
     const currentRoundRef = db.ref('draft/currentRound');
     currentRoundRef.on('value', (snapshot) => {
@@ -31,174 +39,120 @@ function initializeMainScreen() {
     const nominationsRef = db.ref('draft/nominations');
     nominationsRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        console.log('Received data:', data);
-        updateNominationsList(data);
-        updateHistory(data);
+        if (data) {
+            db.ref('draft/teams').once('value', (teamsSnapshot) => {
+                const teamsData = teamsSnapshot.val();
+                updateNominationsList(data, teamsData);
+                updateHistory(data, teamsData);
+            });
+        }
     });
-
-    // チーム選択の更新を追加
-    updateTeamSelect();
 }
 
 // 指名リストの更新
-function updateNominationsList(data) {
+function updateNominationsList(nominationsData, teamsData) {
     const nominationsList = document.getElementById('nominations-list');
     nominationsList.innerHTML = '';
-
-    if (!data) return;
-
+    
     const currentRound = document.getElementById('current-round').textContent;
-    const roundData = data[`round${currentRound}`];
-    console.log('Current round data:', roundData);
+    const roundData = nominationsData[`round${currentRound}`] || {};
 
     // リストグループのコンテナを作成
     const listGroup = document.createElement('div');
     listGroup.className = 'list-group';
 
-    // チーム情報を取得
-    db.ref('draft/teams').once('value', (snapshot) => {
-        const teamsData = snapshot.val();
+    // 全チームについて処理
+    Object.entries(teamsData).forEach(([teamId, teamData]) => {
+        const nomination = roundData[teamId];
+        const listItem = document.createElement('div');
+        listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
         
-        // roundDataが存在する場合のみ処理
-        if (roundData && typeof roundData === 'object') {
-            Object.entries(roundData).forEach(([teamId, nomination]) => {
-                if (nomination) {  // nominationが存在する場合のみ処理
-                    console.log('Processing team:', teamId, nomination);
-                    
-                    const listItem = document.createElement('div');
-                    listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-                    
-                    let statusBadge = '';
-                    let playerDisplay = nomination.playerName || '未指名';
-                    
-                    if (nomination.status === 'lost_lottery') {
-                        statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
-                        playerDisplay = `<s>${nomination.playerName}</s>`;
-                    }
+        let statusBadge = '';
+        let playerDisplay = '未指名';
 
-                    // チーム名を取得
-                    const teamName = teamsData[teamId]?.name || teamId;
-
-                    listItem.innerHTML = `
-                        <div>
-                            <strong>${teamName}</strong>: 
-                            <span class="nomination-player">
-                                ${playerDisplay}
-                            </span>
-                        </div>
-                        ${statusBadge}
-                    `;
-                    
-                    listGroup.appendChild(listItem);
-                }
-            });
+        if (nomination) {
+            playerDisplay = nomination.playerName;
+            if (nomination.status === 'lost_lottery') {
+                statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
+                playerDisplay = `<s>${nomination.playerName}</s>`;
+            }
         }
 
-        // 未指名のチームを追加
-        if (teamsData) {
-            Object.entries(teamsData).forEach(([teamId, team]) => {
-                if (!roundData || !roundData[teamId]) {
-                    const listItem = document.createElement('div');
-                    listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-                    
-                    listItem.innerHTML = `
-                        <div>
-                            <strong>${team.name}</strong>: 
-                            <span class="nomination-player">
-                                未指名
-                            </span>
-                        </div>
-                    `;
-                    
-                    listGroup.appendChild(listItem);
-                }
-            });
-        }
-
-        nominationsList.appendChild(listGroup);
+        listItem.innerHTML = `
+            <div>
+                <strong>${teamData.name}</strong>: 
+                <span class="nomination-player">
+                    ${playerDisplay}
+                </span>
+            </div>
+            ${statusBadge}
+        `;
+        
+        listGroup.appendChild(listItem);
     });
+
+    nominationsList.appendChild(listGroup);
 }
 
 // 指名履歴の更新
-function updateHistory(data) {
+function updateHistory(nominationsData, teamsData) {
     const historyBody = document.getElementById('history-body');
     historyBody.innerHTML = '';
 
-    if (!data) {
-        console.log('No data for history');
-        return;
-    }
+    // 各ラウンドのデータを処理
+    Object.keys(nominationsData).sort().forEach(round => {
+        const roundData = nominationsData[round];
+        if (!roundData) return;
 
-    // チーム情報を取得
-    db.ref('draft/teams').once('value', (snapshot) => {
-        const teamsData = snapshot.val();
+        const roundNumber = round.replace('round', '');
+        
+        Object.entries(roundData).forEach(([teamId, nomination]) => {
+            if (nomination && nomination.playerName) {
+                const row = document.createElement('tr');
+                
+                let status = '完了';
+                if (nomination.status === 'lost_lottery') {
+                    status = '抽選負け';
+                }
 
-        // 各ラウンドのデータを処理
-        Object.keys(data).sort().forEach(round => {
-            const roundData = data[round];
-            if (!roundData) return;
+                const teamName = teamsData[teamId]?.name || teamId;
 
-            const roundNumber = round.replace('round', '');
-            
-            if (typeof roundData === 'object') {
-                Object.entries(roundData).forEach(([teamId, nomination]) => {
-                    if (nomination && nomination.playerName) {
-                        const row = document.createElement('tr');
-                        
-                        let status = '完了';
-                        if (nomination.status === 'lost_lottery') {
-                            status = '抽選負け';
-                        }
-
-                        // チーム名を取得
-                        const teamName = teamsData[teamId]?.name || teamId;
-
-                        row.innerHTML = `
-                            <td>${roundNumber}巡目</td>
-                            <td>${teamName}</td>
-                            <td>${nomination.playerName}</td>
-                            <td>${status}</td>
-                        `;
-                        
-                        historyBody.appendChild(row);
-                    }
-                });
+                row.innerHTML = `
+                    <td>${roundNumber}巡目</td>
+                    <td>${teamName}</td>
+                    <td>${nomination.playerName}</td>
+                    <td>${status}</td>
+                `;
+                
+                historyBody.appendChild(row);
             }
         });
     });
 }
 
-// 抽選結果入力のセレクトボックスを更新
-function updateTeamSelect() {
+// 抽選結果入力のチェックボックスを更新
+function updateTeamSelect(teamsData) {
     const checkboxContainer = document.querySelector('.lost-teams-checkboxes');
     if (!checkboxContainer) return;
 
-    db.ref('draft/teams').once('value', (snapshot) => {
-        const teamsData = snapshot.val();
-        checkboxContainer.innerHTML = '';
+    checkboxContainer.innerHTML = '';
 
-        if (teamsData) {
-            Object.entries(teamsData).forEach(([teamId, team]) => {
-                const div = document.createElement('div');
-                div.className = 'form-check';
-                div.innerHTML = `
-                    <input class="form-check-input" type="checkbox" name="lostTeams" value="${teamId}" id="${teamId}Check">
-                    <label class="form-check-label" for="${teamId}Check">${team.name}</label>
-                `;
-                checkboxContainer.appendChild(div);
-            });
-        }
+    Object.entries(teamsData).forEach(([teamId, team]) => {
+        const div = document.createElement('div');
+        div.className = 'form-check';
+        div.innerHTML = `
+            <input class="form-check-input" type="checkbox" name="lostTeams" value="${teamId}" id="${teamId}Check">
+            <label class="form-check-label" for="${teamId}Check">${team.name}</label>
+        `;
+        checkboxContainer.appendChild(div);
     });
 }
 
 // 抽選負けチームの設定（複数対応版）
 function setLostTeams() {
-    // チェックされたチームを全て取得
     const checkboxes = document.querySelectorAll('input[name="lostTeams"]:checked');
     const lostTeams = Array.from(checkboxes).map(cb => cb.value);
     
-    console.log('Selected teams:', lostTeams);
-
     if (lostTeams.length === 0) {
         alert('抽選負けのチームを選択してください');
         return;
