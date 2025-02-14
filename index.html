@@ -32,8 +32,8 @@
                     <h4>抽選結果入力</h4>
                     <div class="form-group mb-3">
                         <label>抽選で外れたチームを選択（複数選択可）</label>
-                        <div class="lost-teams-checkboxes">
-                            <!-- ここは空にして、JavaScriptで動的に生成 -->
+                        <div id="team-checkboxes" class="lost-teams-checkboxes">
+                            <!-- ここにチェックボックスが動的に生成されます -->
                         </div>
                         <button class="btn btn-primary mt-2" onclick="setLostTeams()">確定</button>
                     </div>
