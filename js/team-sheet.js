@@ -16,36 +16,22 @@ function initializeTeamSheet() {
         return;
     }
 
-    // チーム情報とラウンドの監視
-    Promise.all([
-        db.ref(`teams/${currentTeamId}`).once('value'),
-        db.ref('currentRound').once('value')
-    ]).then(([teamSnapshot, roundSnapshot]) => {
-        const teamData = teamSnapshot.val();
-        const currentRound = roundSnapshot.val() || 1;
-
-        if (teamData) {
-            document.getElementById('team-name').textContent = teamData.name;
-        }
-        document.getElementById('current-round').textContent = currentRound;
-    });
-
-    // 巡目の監視
-    db.ref('currentRound').on('value', (snapshot) => {
-        const round = snapshot.val() || 1;
-        document.getElementById('current-round').textContent = round;
-    });
-
-    // チーム名の監視
-    db.ref(`teams/${currentTeamId}`).on('value', (snapshot) => {
+    // チーム名の取得と表示
+    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
         const teamData = snapshot.val();
         if (teamData) {
             document.getElementById('team-name').textContent = teamData.name;
         }
     });
 
+    // 巡目の監視
+    db.ref('draft/currentRound').on('value', (snapshot) => {
+        const round = snapshot.val() || 1;
+        document.getElementById('current-round').textContent = round;
+    });
+
     // 指名履歴の監視
-    db.ref('nominations').on('value', (snapshot) => {
+    db.ref('draft/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val();
         updateTeamHistory(nominationsData);
     });
@@ -70,11 +56,11 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    db.ref(`teams/${currentTeamId}`).once('value', (snapshot) => {
+    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
         const teamData = snapshot.val();
         const teamName = teamData ? teamData.name : currentTeamId;
         
-        const nominationRef = db.ref(`nominations/round${currentRound}/${currentTeamId}`);
+        const nominationRef = db.ref(`draft/nominations/round${currentRound}/${currentTeamId}`);
         
         nominationRef.set({
             playerName: playerName,
