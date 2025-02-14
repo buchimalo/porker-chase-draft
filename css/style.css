@@ -1,4 +1,19 @@
 /* css/style.css */
+body {
+    background-image: url('../images/bg.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-attachment: fixed;
+    background-color: #ffffff;  /* 白背景 */
+    background-blend-mode: lighten;
+    opacity: 0.9;  /* 全体の透明度 */
+}
+
+/* メインコンテンツの背景を白に */
+.container .card {
+    background-color: rgba(255, 255, 255, 0.95);  /* 少し透過した白 */
+}
 .nomination-player.conflict {
   color: #dc3545;
   font-weight: bold;
