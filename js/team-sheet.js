@@ -16,28 +16,23 @@ function initializeTeamSheet() {
         return;
     }
 
-    console.log('Initializing team sheet for:', currentTeamId); // デバッグ用
-
     // チーム名の取得と表示
-    db.ref('draft/teams/' + currentTeamId).on('value', (snapshot) => {
+    db.ref('draft/teams/' + currentTeamId).on('value', function(snapshot) {
         const teamData = snapshot.val();
-        console.log('Team data:', teamData); // デバッグ用
         if (teamData) {
             document.getElementById('team-name').textContent = teamData.name;
         }
     });
 
     // 巡目の監視
-    db.ref('draft/currentRound').on('value', (snapshot) => {
+    db.ref('draft/currentRound').on('value', function(snapshot) {
         const round = snapshot.val() || 1;
-        console.log('Current round:', round); // デバッグ用
         document.getElementById('current-round').textContent = round;
     });
 
     // 指名履歴の監視
-    db.ref('draft/nominations').on('value', (snapshot) => {
+    db.ref('draft/nominations').on('value', function(snapshot) {
         const nominationsData = snapshot.val();
-        console.log('Nominations data:', nominationsData); // デバッグ用
         updateTeamHistory(nominationsData);
     });
 }
@@ -61,7 +56,7 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    db.ref('draft/teams/' + currentTeamId).once('value', (snapshot) => {
+    db.ref('draft/teams/' + currentTeamId).once('value', function(snapshot) {
         const teamData = snapshot.val();
         const teamName = teamData ? teamData.name : currentTeamId;
         
@@ -72,12 +67,12 @@ function confirmNomination() {
             teamName: teamName,
             timestamp: Date.now(),
             status: 'confirmed'
-        }).then(() => {
+        }).then(function() {
             document.getElementById('player-name').value = '';
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
             modal.hide();
             showAlert('指名を送信しました', 'success');
-        }).catch((error) => {
+        }).catch(function(error) {
             showAlert('エラーが発生しました: ' + error.message, 'danger');
         });
     });
@@ -90,7 +85,7 @@ function updateTeamHistory(nominationsData) {
 
     historyContainer.innerHTML = '';
 
-    Object.entries(nominationsData).forEach(([round, roundData]) => {
+    Object.entries(nominationsData).forEach(function([round, roundData]) {
         if (roundData && roundData[currentTeamId]) {
             const nomination = roundData[currentTeamId];
             const listItem = document.createElement('div');
@@ -98,13 +93,13 @@ function updateTeamHistory(nominationsData) {
             
             let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
 
-            listItem.innerHTML = `
-                ${round.replace('round', '')}巡目: 
-                <span class="nomination-player ${nomination.status}">
-                    ${nomination.playerName}
-                </span>
-                <span class="badge bg-secondary">${status}</span>
-            `;
+            listItem.innerHTML = 
+                round.replace('round', '') + '巡目: ' +
+                '<span class="nomination-player ' + nomination.status + '">' +
+                nomination.playerName +
+                '</span>' +
+                '<span class="badge bg-secondary">' + status + '</span>';
+            
             historyContainer.appendChild(listItem);
         }
     });
@@ -113,16 +108,15 @@ function updateTeamHistory(nominationsData) {
 // アラート表示
 function showAlert(message, type) {
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+    alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+    alertDiv.innerHTML = 
+        message +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
     
     const container = document.querySelector('.nomination-form');
     container.insertBefore(alertDiv, container.firstChild);
     
-    setTimeout(() => {
+    setTimeout(function() {
         alertDiv.remove();
     }, 3000);
 }
