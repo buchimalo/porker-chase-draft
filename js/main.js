@@ -1,7 +1,7 @@
 // js/main.js
 const db = firebase.database();
 
-// 巡目変更機能（最初に定義）
+// 巡目変更機能
 function changeRound(delta) {
     const currentRoundSpan = document.getElementById('current-round');
     let newRound = parseInt(currentRoundSpan.textContent) + delta;
@@ -10,36 +10,29 @@ function changeRound(delta) {
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    // 巡目をFirebaseに保存して同期
+    // 巡目をFirebaseに保存
     db.ref('draft/currentRound').set(newRound).then(() => {
-        // 巡目を更新
-        currentRoundSpan.textContent = newRound;
+        console.log('Round updated to:', newRound); // デバッグ用
+    }).catch(error => {
+        console.error('Error updating round:', error); // デバッグ用
+    });
+}
+
+// 現在の指名状況を監視
+function initializeMainScreen() {
+    // 巡目の監視
+    const currentRoundRef = db.ref('draft/currentRound');
+    currentRoundRef.on('value', (snapshot) => {
+        const round = snapshot.val() || 1;
+        document.getElementById('current-round').textContent = round;
         
-        // データを再読み込み
+        // 巡目が変更されたら指名データも再取得
         const nominationsRef = db.ref('draft/nominations');
         nominationsRef.once('value', (snapshot) => {
             const data = snapshot.val();
             updateNominationsList(data);
             updateHistory(data);
         });
-    });
-}
-
-// 現在の指名状況を監視（修正）
-function initializeMainScreen() {
-    // 巡目の監視を追加
-    const currentRoundRef = db.ref('draft/currentRound');
-    currentRoundRef.on('value', (snapshot) => {
-        const round = snapshot.val() || 1;
-        document.getElementById('current-round').textContent = round;
-    });
-
-    const nominationsRef = db.ref('draft/nominations');
-    nominationsRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        console.log('Received data:', data);
-        updateNominationsList(data);
-        updateHistory(data);
     });
 }
 
