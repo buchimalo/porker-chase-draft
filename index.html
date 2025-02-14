@@ -14,9 +14,11 @@
 <body>
     <div class="container mt-4">
         <div class="card">
-            <!-- 巡目表示の部分を修正 -->
             <div class="card-header bg-primary text-white">
-                <h2 class="mb-0">第<span id="current-round">1</span>巡目</h2>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">第<span id="current-round">1</span>巡目</h2>
+                    <button class="btn btn-light" onclick="showResults()">結果一覧を表示</button>
+                </div>
                 <div class="btn-group mt-2">
                     <button class="btn btn-light" onclick="changeRound(-1)">前の巡</button>
                     <button class="btn btn-light" onclick="changeRound(1)">次の巡</button>
@@ -27,13 +29,13 @@
                     <!-- 指名一覧 -->
                 </div>
 
-               <!-- 抽選結果入力部分 -->
+                <!-- 抽選結果入力部分 -->
                 <div class="admin-controls mt-3">
                     <h4>抽選結果入力</h4>
                     <div class="form-group mb-3">
                         <label>抽選で外れたチームを選択（複数選択可）</label>
-                        <div id="team-checkboxes" class="lost-teams-checkboxes">
-                            <!-- ここにチェックボックスが動的に生成されます -->
+                        <div class="lost-teams-checkboxes">
+                            <!-- チェックボックスがここに生成される -->
                         </div>
                         <button class="btn btn-primary mt-2" onclick="setLostTeams()">確定</button>
                     </div>
@@ -55,29 +57,23 @@
                     </table>
                 </div>
             </div>
+        </div>
 
-            <!-- 結果表示モーダル -->
-            <div class="modal fade" id="resultsModal" tabindex="-1">
-                <div class="modal-dialog modal-xl">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">ドラフト結果一覧</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row" id="results-container">
-                                <!-- 結果がここに表示される -->
-                            </div>
+        <!-- 結果表示モーダル -->
+        <div class="modal fade" id="resultsModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">ドラフト結果一覧</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row" id="results-container">
+                            <!-- 結果がここに表示される -->
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- 結果表示ボタン -->
-            <div class="text-end mt-3">
-                <button class="btn btn-info" onclick="showResults()">結果一覧を表示</button>
-            </div>
-            
         </div>
     </div>
 
