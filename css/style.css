@@ -6,12 +6,12 @@ body {
     background-size: contain;
     background-attachment: fixed;
     background-color: #ffffff;  /* 白背景 */
-    background-blend-mode: lighten;
+    background-blend-mode: multiply;
 }
 
 /* メインコンテンツの背景を白に */
 .container .card {
-    background-color: rgba(255, 255, 255, 0.95);  /* 少し透過した白 */
+    background-color: rgba(255, 255, 255, 0.9);  /* 少し透過した白 */
 }
 .nomination-player.conflict {
   color: #dc3545;
