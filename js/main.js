@@ -23,7 +23,7 @@ function changeRound(delta) {
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    db.ref('currentRound').set(newRound)
+    db.ref('draft/currentRound').set(newRound)
         .then(() => log('Round updated', newRound))
         .catch(error => console.error('Round update error:', error));
 }
@@ -33,7 +33,7 @@ function initializeMainScreen() {
     log('Initializing main screen');
 
     // チーム情報の監視
-    db.ref('teams').on('value', (snapshot) => {
+    db.ref('draft/teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
         log('Teams data received', teamsData);
 
@@ -46,7 +46,7 @@ function initializeMainScreen() {
         updateTeamCheckboxes(teamsData);
 
         // 指名データを取得
-        db.ref('nominations').once('value', (nominationsSnapshot) => {
+        db.ref('draft/nominations').once('value', (nominationsSnapshot) => {
             const nominationsData = nominationsSnapshot.val() || {};
             log('Nominations data received', nominationsData);
             updateDisplay(teamsData, nominationsData);
@@ -54,11 +54,11 @@ function initializeMainScreen() {
     });
 
     // 指名データの監視
-    db.ref('nominations').on('value', (snapshot) => {
+    db.ref('draft/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val() || {};
         log('Nominations updated', nominationsData);
 
-        db.ref('teams').once('value', (teamsSnapshot) => {
+        db.ref('draft/teams').once('value', (teamsSnapshot) => {
             const teamsData = teamsSnapshot.val();
             if (teamsData) {
                 updateDisplay(teamsData, nominationsData);
@@ -67,7 +67,7 @@ function initializeMainScreen() {
     });
 
     // 巡目の監視
-    db.ref('currentRound').on('value', (snapshot) => {
+    db.ref('draft/currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
         log('Current round updated', round);
         document.getElementById('current-round').textContent = round;
@@ -196,8 +196,8 @@ function setLostTeams() {
     const updates = {};
 
     lostTeams.forEach(teamId => {
-        updates[`nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
-        updates[`nominations/round${currentRound}/${teamId}/canReselect`] = true;
+        updates[`draft/nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
+        updates[`draft/nominations/round${currentRound}/${teamId}/canReselect`] = true;
     });
 
     log('Updating lost teams', updates);
