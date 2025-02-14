@@ -56,18 +56,3 @@
     background-color: #FFF5CD !important;
 }
 
-/* 既存のチームカラーはそのまま使用 */
-
-/* 結果表示用の追加スタイル */
-.card {
-    height: 100%;
-    margin-bottom: 1rem;
-}
-
-.card-header {
-    background-color: rgba(0, 0, 0, 0.03);
-}
-
-.list-group-item {
-    background-color: transparent;
-}
