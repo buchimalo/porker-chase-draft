@@ -11,11 +11,9 @@ function changeRound(delta) {
     const currentRoundSpan = document.getElementById('current-round');
     let newRound = parseInt(currentRoundSpan.textContent) + delta;
     
-    // 1-6巡の範囲内に制限
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    // 巡目をFirebaseに保存
     db.ref('/draft/currentRound').set(newRound);
 }
 
@@ -25,29 +23,27 @@ function initializeMainScreen() {
 
     // チーム情報の監視
     db.ref('/draft/teams').on('value', (snapshot) => {
-        const teamsData = snapshot.val();
+        const teamsData = snapshot.val() || {};
         log('Teams data received', teamsData);
         
-        if (teamsData) {
-            // チェックボックスを更新
-            updateTeamCheckboxes(teamsData);
-            
-            // 指名データを取得して表示を更新
-            db.ref('/nominations').once('value', (nominationsSnapshot) => {
-                const nominationsData = nominationsSnapshot.val();
-                log('Nominations data received', nominationsData);
-                updateDisplay(teamsData, nominationsData);
-            });
-        }
+        // チェックボックスを更新
+        updateTeamCheckboxes(teamsData);
+        
+        // 指名データを取得して表示を更新
+        db.ref('/nominations').once('value', (nominationsSnapshot) => {
+            const nominationsData = nominationsSnapshot.val() || {};
+            log('Nominations data received', nominationsData);
+            updateDisplay(teamsData, nominationsData);
+        });
     });
 
     // 指名データの監視
     db.ref('/nominations').on('value', (snapshot) => {
-        const nominationsData = snapshot.val();
+        const nominationsData = snapshot.val() || {};
         log('Nominations updated', nominationsData);
         
         db.ref('/draft/teams').once('value', (teamsSnapshot) => {
-            const teamsData = teamsSnapshot.val();
+            const teamsData = teamsSnapshot.val() || {};
             updateDisplay(teamsData, nominationsData);
         });
     });
@@ -64,72 +60,68 @@ function initializeMainScreen() {
 function updateTeamCheckboxes(teamsData) {
     log('Updating team checkboxes', teamsData);
     const container = document.getElementById('team-checkboxes');
-    if (!container) {
-        console.error('Checkbox container not found');
-        return;
-    }
+    if (!container) return;
 
     container.innerHTML = '';
-    Object.entries(teamsData).forEach(([teamId, team]) => {
-        const div = document.createElement('div');
-        div.className = 'form-check';
-        div.innerHTML = `
-            <input class="form-check-input" type="checkbox" name="lostTeams" value="${teamId}" id="${teamId}Check">
-            <label class="form-check-label" for="${teamId}Check">${team.name}</label>
-        `;
-        container.appendChild(div);
-    });
+    if (Object.keys(teamsData).length > 0) {
+        Object.entries(teamsData).forEach(([teamId, team]) => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" name="lostTeams" value="${teamId}" id="${teamId}Check">
+                <label class="form-check-label" for="${teamId}Check">${team.name}</label>
+            `;
+            container.appendChild(div);
+        });
+    }
 }
 
 // 画面表示の更新
 function updateDisplay(teamsData, nominationsData) {
     log('Updating display', { teamsData, nominationsData });
     const currentRound = document.getElementById('current-round').textContent;
-    const roundData = nominationsData ? nominationsData[`round${currentRound}`] || {} : {};
+    const roundData = nominationsData[`round${currentRound}`] || {};
 
     // 指名リストの更新
     const nominationsList = document.getElementById('nominations-list');
-    if (!nominationsList) {
-        console.error('Nominations list container not found');
-        return;
-    }
+    if (!nominationsList) return;
 
     nominationsList.innerHTML = '';
     const listGroup = document.createElement('div');
     listGroup.className = 'list-group';
 
-    Object.entries(teamsData).forEach(([teamId, team]) => {
-        const nomination = roundData[teamId];
-        const div = document.createElement('div');
-        div.className = 'list-group-item';
+    if (Object.keys(teamsData).length > 0) {
+        Object.entries(teamsData).forEach(([teamId, team]) => {
+            const nomination = roundData[teamId];
+            const div = document.createElement('div');
+            div.className = 'list-group-item';
 
-        let playerInfo = '未指名';
-        let statusBadge = '';
+            let playerInfo = '未指名';
+            let statusBadge = '';
 
-        if (nomination) {
-            playerInfo = nomination.playerName;
-            if (nomination.status === 'lost_lottery') {
-                statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
-                playerInfo = `<s>${playerInfo}</s>`;
+            if (nomination) {
+                playerInfo = nomination.playerName;
+                if (nomination.status === 'lost_lottery') {
+                    statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
+                    playerInfo = `<s>${playerInfo}</s>`;
+                }
             }
-        }
 
-        div.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>${team.name}</strong>: 
-                    <span class="nomination-player">${playerInfo}</span>
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${team.name}</strong>: 
+                        <span class="nomination-player">${playerInfo}</span>
+                    </div>
+                    ${statusBadge}
                 </div>
-                ${statusBadge}
-            </div>
-        `;
+            `;
 
-        listGroup.appendChild(div);
-    });
+            listGroup.appendChild(div);
+        });
+    }
 
     nominationsList.appendChild(listGroup);
-
-    // 履歴の更新
     updateHistory(teamsData, nominationsData);
 }
 
@@ -137,13 +129,10 @@ function updateDisplay(teamsData, nominationsData) {
 function updateHistory(teamsData, nominationsData) {
     log('Updating history', { teamsData, nominationsData });
     const historyBody = document.getElementById('history-body');
-    if (!historyBody) {
-        console.error('History body not found');
-        return;
-    }
+    if (!historyBody) return;
 
     historyBody.innerHTML = '';
-    if (!nominationsData) return;
+    if (!nominationsData || Object.keys(nominationsData).length === 0) return;
 
     Object.entries(nominationsData).sort().forEach(([round, roundData]) => {
         if (!roundData) return;
@@ -153,10 +142,7 @@ function updateHistory(teamsData, nominationsData) {
             if (!nomination || !nomination.playerName) return;
 
             const team = teamsData[teamId];
-            if (!team) {
-                console.error(`Team not found: ${teamId}`);
-                return;
-            }
+            if (!team) return;
 
             const row = document.createElement('tr');
             let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
