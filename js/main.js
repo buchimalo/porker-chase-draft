@@ -60,15 +60,18 @@ function updateNominationsList(data) {
             listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
             
             let statusBadge = '';
+            let playerDisplay = nomination.playerName || '未指名';
+            
             if (nomination.status === 'lost_lottery') {
-                statusBadge = '<span class="badge bg-warning">抽選負け - 再指名待ち</span>';
+                statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
+                playerDisplay = `<s>${nomination.playerName}</s>`; // 取り消し線を追加
             }
 
             listItem.innerHTML = `
                 <div>
                     <strong>${nomination.teamName}</strong>: 
                     <span class="nomination-player">
-                        ${nomination.playerName || '未指名'}
+                        ${playerDisplay}
                     </span>
                 </div>
                 ${statusBadge}
@@ -137,38 +140,23 @@ function setLostTeams() {
     }
 
     const currentRound = document.getElementById('current-round').textContent;
-    const updates = {};
-
+    
     // 各チームのステータスを更新
-    lostTeams.forEach(teamId => {
+    Promise.all(lostTeams.map(teamId => {
         const path = `draft/nominations/round${currentRound}/${teamId}`;
-        console.log('Updating path:', path);
-        
-        // 既存のデータを保持しながら状態を更新
-        db.ref(path).once('value', (snapshot) => {
-            const currentData = snapshot.val() || {};
-            updates[path] = {
-                ...currentData,
-                status: 'lost_lottery',
-                canReselect: true
-            };
-            
-            // 全てのチームの処理が完了したら更新を実行
-            if (Object.keys(updates).length === lostTeams.length) {
-                console.log('Final updates:', updates);
-                
-                db.ref().update(updates).then(() => {
-                    const message = `${lostTeams.length}チームに再指名権を付与しました`;
-                    alert(message);
-                    
-                    // チェックボックスをリセット
-                    checkboxes.forEach(cb => cb.checked = false);
-                }).catch(error => {
-                    console.error('Update error:', error);
-                    alert('エラーが発生しました: ' + error.message);
-                });
-            }
+        return db.ref(path).update({
+            status: 'lost_lottery',
+            canReselect: true
         });
+    })).then(() => {
+        const message = `${lostTeams.length}チームに再指名権を付与しました`;
+        alert(message);
+        
+        // チェックボックスをリセット
+        checkboxes.forEach(cb => cb.checked = false);
+    }).catch(error => {
+        console.error('Update error:', error);
+        alert('エラーが発生しました: ' + error.message);
     });
 }
 
