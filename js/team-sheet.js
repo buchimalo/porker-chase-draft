@@ -16,26 +16,24 @@ function initializeTeamSheet() {
         return;
     }
 
-    // 巡目の監視
-    const currentRoundRef = db.ref('draft/currentRound');
-    currentRoundRef.on('value', (snapshot) => {
-        const round = snapshot.val() || 1;
-        document.getElementById('current-round').textContent = round;
-    });
-
     // チーム名の取得と表示
-    const teamRef = db.ref(`draft/teams/${currentTeamId}`);
-    teamRef.once('value', (snapshot) => {
+    db.ref(`teams/${currentTeamId}`).once('value', (snapshot) => {
         const teamData = snapshot.val();
         if (teamData) {
             document.getElementById('team-name').textContent = teamData.name;
         }
     });
 
+    // 巡目の監視
+    db.ref('currentRound').on('value', (snapshot) => {
+        const round = snapshot.val() || 1;
+        document.getElementById('current-round').textContent = round;
+    });
+
     // 指名履歴の監視
-    const nominationsRef = db.ref('draft/nominations');
-    nominationsRef.on('value', (snapshot) => {
-        updateTeamHistory(snapshot.val());
+    db.ref('nominations').on('value', (snapshot) => {
+        const nominationsData = snapshot.val();
+        updateTeamHistory(nominationsData);
     });
 }
 
@@ -58,12 +56,11 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    // チーム情報を取得してから送信
-    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
+    db.ref(`teams/${currentTeamId}`).once('value', (snapshot) => {
         const teamData = snapshot.val();
         const teamName = teamData ? teamData.name : currentTeamId;
         
-        const nominationRef = db.ref(`draft/nominations/round${currentRound}/${currentTeamId}`);
+        const nominationRef = db.ref(`nominations/round${currentRound}/${currentTeamId}`);
         
         nominationRef.set({
             playerName: playerName,
@@ -84,36 +81,27 @@ function confirmNomination() {
 // チームの指名履歴を更新
 function updateTeamHistory(nominationsData) {
     const historyContainer = document.getElementById('team-history');
+    if (!historyContainer || !nominationsData) return;
+
     historyContainer.innerHTML = '';
 
-    if (!nominationsData) return;
+    Object.entries(nominationsData).forEach(([round, roundData]) => {
+        if (roundData && roundData[currentTeamId]) {
+            const nomination = roundData[currentTeamId];
+            const listItem = document.createElement('div');
+            listItem.className = 'list-group-item';
+            
+            let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
 
-    // チーム情報を取得
-    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
-        const teamData = snapshot.val();
-        const teamName = teamData ? teamData.name : currentTeamId;
-
-        Object.entries(nominationsData).forEach(([round, roundData]) => {
-            if (roundData && roundData[currentTeamId]) {
-                const nomination = roundData[currentTeamId];
-                const listItem = document.createElement('div');
-                listItem.className = 'list-group-item';
-                
-                let status = '完了';
-                if (nomination.status === 'lost_lottery') {
-                    status = '抽選負け';
-                }
-
-                listItem.innerHTML = `
-                    ${round.replace('round', '')}巡目: 
-                    <span class="nomination-player ${nomination.status}">
-                        ${nomination.playerName}
-                    </span>
-                    <span class="badge bg-secondary">${status}</span>
-                `;
-                historyContainer.appendChild(listItem);
-            }
-        });
+            listItem.innerHTML = `
+                ${round.replace('round', '')}巡目: 
+                <span class="nomination-player ${nomination.status}">
+                    ${nomination.playerName}
+                </span>
+                <span class="badge bg-secondary">${status}</span>
+            `;
+            historyContainer.appendChild(listItem);
+        }
     });
 }
 
