@@ -35,6 +35,9 @@ function initializeMainScreen() {
         updateNominationsList(data);
         updateHistory(data);
     });
+
+    // チーム選択の更新を追加
+    updateTeamSelect();
 }
 
 // 指名リストの更新
@@ -53,31 +56,39 @@ function updateNominationsList(data) {
         const listGroup = document.createElement('div');
         listGroup.className = 'list-group';
         
-        Object.entries(roundData).forEach(([teamId, nomination]) => {
-            console.log('Processing team:', teamId, nomination);
+        // チーム情報を取得
+        db.ref('draft/teams').once('value', (snapshot) => {
+            const teamsData = snapshot.val();
             
-            const listItem = document.createElement('div');
-            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-            
-            let statusBadge = '';
-            let playerDisplay = nomination.playerName || '未指名';
-            
-            if (nomination.status === 'lost_lottery') {
-                statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
-                playerDisplay = `<s>${nomination.playerName}</s>`; // 取り消し線を追加
-            }
+            Object.entries(roundData).forEach(([teamId, nomination]) => {
+                console.log('Processing team:', teamId, nomination);
+                
+                const listItem = document.createElement('div');
+                listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                
+                let statusBadge = '';
+                let playerDisplay = nomination.playerName || '未指名';
+                
+                if (nomination.status === 'lost_lottery') {
+                    statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
+                    playerDisplay = `<s>${nomination.playerName}</s>`;
+                }
 
-            listItem.innerHTML = `
-                <div>
-                    <strong>${nomination.teamName}</strong>: 
-                    <span class="nomination-player">
-                        ${playerDisplay}
-                    </span>
-                </div>
-                ${statusBadge}
-            `;
-            
-            listGroup.appendChild(listItem);
+                // チーム名を取得
+                const teamName = teamsData[teamId]?.name || teamId;
+
+                listItem.innerHTML = `
+                    <div>
+                        <strong>${teamName}</strong>: 
+                        <span class="nomination-player">
+                            ${playerDisplay}
+                        </span>
+                    </div>
+                    ${statusBadge}
+                `;
+                
+                listGroup.appendChild(listItem);
+            });
         });
 
         nominationsList.appendChild(listGroup);
@@ -96,33 +107,62 @@ function updateHistory(data) {
 
     console.log('Updating history with data:', data);
 
-    // 各ラウンドのデータを処理
-    Object.keys(data).sort().forEach(round => {
-        const roundData = data[round];
-        const roundNumber = round.replace('round', '');
-        
-        // そのラウンドの各チームの指名を表示
-        if (roundData) {
-            Object.entries(roundData).forEach(([teamId, nomination]) => {
-                if (nomination.playerName) { // 指名がある場合のみ表示
-                    const row = document.createElement('tr');
-                    
-                    let status = '完了';
-                    if (nomination.status === 'lost_lottery') {
-                        status = '抽選負け';
-                    }
+    // チーム情報を取得
+    db.ref('draft/teams').once('value', (snapshot) => {
+        const teamsData = snapshot.val();
 
-                    row.innerHTML = `
-                        <td>${roundNumber}巡目</td>
-                        <td>${nomination.teamName}</td>
-                        <td>${nomination.playerName}</td>
-                        <td>${status}</td>
-                    `;
-                    
-                    historyBody.appendChild(row);
-                }
-            });
-        }
+        // 各ラウンドのデータを処理
+        Object.keys(data).sort().forEach(round => {
+            const roundData = data[round];
+            const roundNumber = round.replace('round', '');
+            
+            // そのラウンドの各チームの指名を表示
+            if (roundData) {
+                Object.entries(roundData).forEach(([teamId, nomination]) => {
+                    if (nomination.playerName) { // 指名がある場合のみ表示
+                        const row = document.createElement('tr');
+                        
+                        let status = '完了';
+                        if (nomination.status === 'lost_lottery') {
+                            status = '抽選負け';
+                        }
+
+                        // チーム名を取得
+                        const teamName = teamsData[teamId]?.name || teamId;
+
+                        row.innerHTML = `
+                            <td>${roundNumber}巡目</td>
+                            <td>${teamName}</td>
+                            <td>${nomination.playerName}</td>
+                            <td>${status}</td>
+                        `;
+                        
+                        historyBody.appendChild(row);
+                    }
+                });
+            }
+        });
+    });
+}
+
+// 抽選結果入力のセレクトボックスを更新
+function updateTeamSelect() {
+    const checkboxContainer = document.querySelector('.lost-teams-checkboxes');
+    if (!checkboxContainer) return;
+
+    db.ref('draft/teams').once('value', (snapshot) => {
+        const teamsData = snapshot.val();
+        checkboxContainer.innerHTML = '';
+
+        Object.entries(teamsData).forEach(([teamId, team]) => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" name="lostTeams" value="${teamId}" id="${teamId}Check">
+                <label class="form-check-label" for="${teamId}Check">${team.name}</label>
+            `;
+            checkboxContainer.appendChild(div);
+        });
     });
 }
 
