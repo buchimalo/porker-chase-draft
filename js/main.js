@@ -1,6 +1,11 @@
 // js/main.js
 const db = firebase.database();
 
+// デバッグ用のログ関数
+function log(message, data) {
+    console.log(`[DEBUG] ${message}:`, data);
+}
+
 // 巡目変更機能
 function changeRound(delta) {
     const currentRoundSpan = document.getElementById('current-round');
@@ -11,46 +16,58 @@ function changeRound(delta) {
     if (newRound > 6) newRound = 6;
     
     // 巡目をFirebaseに保存
-    db.ref('currentRound').set(newRound);
+    db.ref('/draft/currentRound').set(newRound);
 }
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
-    // チーム情報を取得
-    db.ref('draft/teams').on('value', (snapshot) => {
+    log('Initializing main screen');
+
+    // チーム情報の監視
+    db.ref('/draft/teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
+        log('Teams data received', teamsData);
+        
         if (teamsData) {
             // チェックボックスを更新
             updateTeamCheckboxes(teamsData);
             
-            // 指名データも取得して表示を更新
-            db.ref('nominations').once('value', (nominationsSnapshot) => {
+            // 指名データを取得して表示を更新
+            db.ref('/nominations').once('value', (nominationsSnapshot) => {
                 const nominationsData = nominationsSnapshot.val();
+                log('Nominations data received', nominationsData);
                 updateDisplay(teamsData, nominationsData);
             });
         }
     });
 
     // 指名データの監視
-    db.ref('nominations').on('value', (snapshot) => {
+    db.ref('/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val();
-        db.ref('draft/teams').once('value', (teamsSnapshot) => {
+        log('Nominations updated', nominationsData);
+        
+        db.ref('/draft/teams').once('value', (teamsSnapshot) => {
             const teamsData = teamsSnapshot.val();
             updateDisplay(teamsData, nominationsData);
         });
     });
 
     // 巡目の監視
-    db.ref('currentRound').on('value', (snapshot) => {
+    db.ref('/draft/currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
+        log('Current round updated', round);
         document.getElementById('current-round').textContent = round;
     });
 }
 
 // チーム選択のチェックボックスを更新
 function updateTeamCheckboxes(teamsData) {
-    const container = document.querySelector('.lost-teams-checkboxes');
-    if (!container) return;
+    log('Updating team checkboxes', teamsData);
+    const container = document.getElementById('team-checkboxes');
+    if (!container) {
+        console.error('Checkbox container not found');
+        return;
+    }
 
     container.innerHTML = '';
     Object.entries(teamsData).forEach(([teamId, team]) => {
@@ -66,11 +83,17 @@ function updateTeamCheckboxes(teamsData) {
 
 // 画面表示の更新
 function updateDisplay(teamsData, nominationsData) {
+    log('Updating display', { teamsData, nominationsData });
     const currentRound = document.getElementById('current-round').textContent;
     const roundData = nominationsData ? nominationsData[`round${currentRound}`] || {} : {};
 
     // 指名リストの更新
     const nominationsList = document.getElementById('nominations-list');
+    if (!nominationsList) {
+        console.error('Nominations list container not found');
+        return;
+    }
+
     nominationsList.innerHTML = '';
     const listGroup = document.createElement('div');
     listGroup.className = 'list-group';
@@ -112,22 +135,30 @@ function updateDisplay(teamsData, nominationsData) {
 
 // 履歴の更新
 function updateHistory(teamsData, nominationsData) {
+    log('Updating history', { teamsData, nominationsData });
     const historyBody = document.getElementById('history-body');
-    historyBody.innerHTML = '';
+    if (!historyBody) {
+        console.error('History body not found');
+        return;
+    }
 
+    historyBody.innerHTML = '';
     if (!nominationsData) return;
 
     Object.entries(nominationsData).sort().forEach(([round, roundData]) => {
         if (!roundData) return;
 
         const roundNumber = round.replace('round', '');
-
         Object.entries(roundData).forEach(([teamId, nomination]) => {
             if (!nomination || !nomination.playerName) return;
 
-            const row = document.createElement('tr');
             const team = teamsData[teamId];
-            
+            if (!team) {
+                console.error(`Team not found: ${teamId}`);
+                return;
+            }
+
+            const row = document.createElement('tr');
             let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
 
             row.innerHTML = `
@@ -147,6 +178,8 @@ function setLostTeams() {
     const checkboxes = document.querySelectorAll('input[name="lostTeams"]:checked');
     const lostTeams = Array.from(checkboxes).map(cb => cb.value);
     
+    log('Setting lost teams', lostTeams);
+    
     if (lostTeams.length === 0) {
         alert('抽選負けのチームを選択してください');
         return;
@@ -156,9 +189,11 @@ function setLostTeams() {
     const updates = {};
 
     lostTeams.forEach(teamId => {
-        updates[`nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
-        updates[`nominations/round${currentRound}/${teamId}/canReselect`] = true;
+        updates[`/nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
+        updates[`/nominations/round${currentRound}/${teamId}/canReselect`] = true;
     });
+
+    log('Updating lost teams', updates);
 
     db.ref().update(updates)
         .then(() => {
