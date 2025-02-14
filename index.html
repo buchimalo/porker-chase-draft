@@ -14,8 +14,13 @@
 <body>
     <div class="container mt-4">
         <div class="card">
+            <!-- 巡目表示の部分を修正 -->
             <div class="card-header bg-primary text-white">
                 <h2 class="mb-0">第<span id="current-round">1</span>巡目</h2>
+                <div class="btn-group mt-2">
+                    <button class="btn btn-light" onclick="changeRound(-1)">前の巡</button>
+                    <button class="btn btn-light" onclick="changeRound(1)">次の巡</button>
+                </div>
             </div>
             <div class="card-body">
                 <div id="nominations-list" class="mb-4">
