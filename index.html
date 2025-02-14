@@ -21,6 +21,22 @@
                 <div id="nominations-list" class="mb-4">
                     <!-- 指名一覧 -->
                 </div>
+
+                <!-- 指名一覧の下に追加 -->
+                <div class="admin-controls mt-3">
+                    <h4>抽選結果入力</h4>
+                    <div class="input-group mb-3">
+                        <select class="form-select" id="lostTeamSelect">
+                            <option value="">抽選で外れたチームを選択</option>
+                            <option value="team1">チーム1</option>
+                            <option value="team2">チーム2</option>
+                            <option value="team3">チーム3</option>
+                            <option value="team4">チーム4</option>
+                            <option value="team5">チーム5</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="setLostTeam()">確定</button>
+                    </div>
+                </div>
                 
                 <h4 class="mb-3">指名履歴</h4>
                 <div id="history" class="table-responsive">
