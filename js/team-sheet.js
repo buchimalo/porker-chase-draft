@@ -8,7 +8,7 @@ function getTeamIdFromUrl() {
     return urlParams.get('team');
 }
 
-// チーム情報の初期化（修正）
+// チーム情報の初期化
 function initializeTeamSheet() {
     currentTeamId = getTeamIdFromUrl();
     if (!currentTeamId) {
@@ -16,7 +16,7 @@ function initializeTeamSheet() {
         return;
     }
 
-    // 巡目の監視を追加
+    // 巡目の監視
     const currentRoundRef = db.ref('draft/currentRound');
     currentRoundRef.on('value', (snapshot) => {
         const round = snapshot.val() || 1;
@@ -33,7 +33,7 @@ function initializeTeamSheet() {
     });
 
     // 指名履歴の監視
-    const nominationsRef = db.ref(`draft/nominations`);
+    const nominationsRef = db.ref('draft/nominations');
     nominationsRef.on('value', (snapshot) => {
         updateTeamHistory(snapshot.val());
     });
@@ -56,6 +56,7 @@ function submitNomination() {
 // 指名の確定送信
 function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
+    const currentRound = document.getElementById('current-round').textContent;
     const nominationRef = db.ref(`draft/nominations/round${currentRound}/${currentTeamId}`);
     
     nominationRef.set({
@@ -70,6 +71,36 @@ function confirmNomination() {
         showAlert('指名を送信しました', 'success');
     }).catch((error) => {
         showAlert('エラーが発生しました: ' + error.message, 'danger');
+    });
+}
+
+// チームの指名履歴を更新
+function updateTeamHistory(nominationsData) {
+    const historyContainer = document.getElementById('team-history');
+    historyContainer.innerHTML = '';
+
+    if (!nominationsData) return;
+
+    Object.entries(nominationsData).forEach(([round, roundData]) => {
+        if (roundData && roundData[currentTeamId]) {
+            const nomination = roundData[currentTeamId];
+            const listItem = document.createElement('div');
+            listItem.className = 'list-group-item';
+            
+            let status = '完了';
+            if (nomination.status === 'lost_lottery') {
+                status = '抽選負け';
+            }
+
+            listItem.innerHTML = `
+                ${round.replace('round', '')}巡目: 
+                <span class="nomination-player ${nomination.status}">
+                    ${nomination.playerName}
+                </span>
+                <span class="badge bg-secondary">${status}</span>
+            `;
+            historyContainer.appendChild(listItem);
+        }
     });
 }
 
@@ -88,29 +119,6 @@ function showAlert(message, type) {
     setTimeout(() => {
         alertDiv.remove();
     }, 3000);
-}
-
-// チームの指名履歴を更新
-function updateTeamHistory(nominationsData) {
-    const historyContainer = document.getElementById('team-history');
-    historyContainer.innerHTML = '';
-
-    if (!nominationsData) return;
-
-    Object.entries(nominationsData).forEach(([round, roundData]) => {
-        if (roundData[currentTeamId]) {
-            const nomination = roundData[currentTeamId];
-            const listItem = document.createElement('div');
-            listItem.className = 'list-group-item';
-            listItem.innerHTML = `
-                ${round.replace('round', '')}巡目: 
-                <span class="nomination-player ${nomination.status}">
-                    ${nomination.playerName}
-                </span>
-            `;
-            historyContainer.appendChild(listItem);
-        }
-    });
 }
 
 // 画面読み込み時に初期化
