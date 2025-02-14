@@ -89,9 +89,9 @@ function updateNominationsList(data) {
                 
                 listGroup.appendChild(listItem);
             });
-        });
 
-        nominationsList.appendChild(listGroup);
+            nominationsList.appendChild(listGroup);
+        });
     }
 }
 
@@ -105,8 +105,6 @@ function updateHistory(data) {
         return;
     }
 
-    console.log('Updating history with data:', data);
-
     // チーム情報を取得
     db.ref('draft/teams').once('value', (snapshot) => {
         const teamsData = snapshot.val();
@@ -114,33 +112,32 @@ function updateHistory(data) {
         // 各ラウンドのデータを処理
         Object.keys(data).sort().forEach(round => {
             const roundData = data[round];
+            if (!roundData) return;
+
             const roundNumber = round.replace('round', '');
             
-            // そのラウンドの各チームの指名を表示
-            if (roundData) {
-                Object.entries(roundData).forEach(([teamId, nomination]) => {
-                    if (nomination.playerName) { // 指名がある場合のみ表示
-                        const row = document.createElement('tr');
-                        
-                        let status = '完了';
-                        if (nomination.status === 'lost_lottery') {
-                            status = '抽選負け';
-                        }
-
-                        // チーム名を取得
-                        const teamName = teamsData[teamId]?.name || teamId;
-
-                        row.innerHTML = `
-                            <td>${roundNumber}巡目</td>
-                            <td>${teamName}</td>
-                            <td>${nomination.playerName}</td>
-                            <td>${status}</td>
-                        `;
-                        
-                        historyBody.appendChild(row);
+            Object.entries(roundData).forEach(([teamId, nomination]) => {
+                if (nomination && nomination.playerName) {
+                    const row = document.createElement('tr');
+                    
+                    let status = '完了';
+                    if (nomination.status === 'lost_lottery') {
+                        status = '抽選負け';
                     }
-                });
-            }
+
+                    // チーム名を取得
+                    const teamName = teamsData[teamId]?.name || teamId;
+
+                    row.innerHTML = `
+                        <td>${roundNumber}巡目</td>
+                        <td>${teamName}</td>
+                        <td>${nomination.playerName}</td>
+                        <td>${status}</td>
+                    `;
+                    
+                    historyBody.appendChild(row);
+                }
+            });
         });
     });
 }
