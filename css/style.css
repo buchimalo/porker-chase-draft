@@ -6,7 +6,7 @@ body {
     background-size: contain;
     background-attachment: fixed;
     background-color: #ffffff;  /* 白背景 */
-    opacity: 0.5;  /* 全体の透明度 */
+    opacity: 0.25;  /* 全体の透明度 */
 }
 
 /* メインコンテンツの背景を白に */
