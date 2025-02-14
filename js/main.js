@@ -172,8 +172,6 @@ function setLostTeams() {
         });
 }
 
-// 画面読み込み時に初期化
-document.addEventListener('DOMContentLoaded', initializeMainScreen);
 
 // 結果表示機能
 function showResults() {
@@ -238,3 +236,6 @@ function showResults() {
         }
     });
 }
+
+// 画面読み込み時に初期化
+document.addEventListener('DOMContentLoaded', initializeMainScreen);
