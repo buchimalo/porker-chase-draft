@@ -2,22 +2,26 @@
 const db = firebase.database();
 
 function initializeResults() {
-    // チーム情報とドラフトデータを同時に取得
-    Promise.all([
-        db.ref('draft/teams').once('value'),
-        db.ref('draft/nominations').on('value')
-    ]).then(([teamsSnapshot, nominationsSnapshot]) => {
-        const teamsData = teamsSnapshot.val();
-        const nominationsData = nominationsSnapshot.val();
-        updateResults(teamsData, nominationsData);
+    // チーム情報の監視
+    db.ref('draft/teams').on('value', (snapshot) => {
+        const teamsData = snapshot.val();
+        if (teamsData) {
+            // 指名データを取得
+            db.ref('draft/nominations').once('value', (nominationsSnapshot) => {
+                const nominationsData = nominationsSnapshot.val() || {};
+                updateResults(teamsData, nominationsData);
+            });
+        }
     });
 
-    // リアルタイム更新のリスナー
+    // 指名データの監視
     db.ref('draft/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val();
-        db.ref('draft/teams').once('value').then((teamsSnapshot) => {
+        db.ref('draft/teams').once('value', (teamsSnapshot) => {
             const teamsData = teamsSnapshot.val();
-            updateResults(teamsData, nominationsData);
+            if (teamsData) {
+                updateResults(teamsData, nominationsData);
+            }
         });
     });
 }
@@ -26,42 +30,30 @@ function updateResults(teamsData, nominationsData) {
     const container = document.getElementById('results-container');
     container.innerHTML = '';
 
-    // 各チームの結果を表示
     Object.entries(teamsData).forEach(([teamId, team]) => {
         const col = document.createElement('div');
-        col.className = `col-md team-color-${teamId.replace('team', '')}`;
-        
-        let nominations = [];
-        // 全ラウンドの指名を収集
-        if (nominationsData) {
-            for (let round = 1; round <= 6; round++) {
-                const roundData = nominationsData[`round${round}`];
-                if (roundData && roundData[teamId]) {
-                    nominations.push({
-                        round: round,
-                        player: roundData[teamId].playerName,
-                        status: roundData[teamId].status
-                    });
-                }
+        col.className = 'col-md-2 mb-4';
+
+        let nominationsList = '';
+        for (let round = 1; round <= 6; round++) {
+            const roundData = nominationsData[`round${round}`];
+            if (roundData && roundData[teamId]) {
+                const nomination = roundData[teamId];
+                const playerDisplay = nomination.status === 'lost_lottery' ? 
+                    `<s>${nomination.playerName}</s> <span class="badge bg-warning">抽選負け</span>` : 
+                    nomination.playerName;
+                nominationsList += `<li class="list-group-item">${round}巡目: ${playerDisplay}</li>`;
             }
         }
 
-        // チームの結果カードを作成
         col.innerHTML = `
-            <div class="card mb-4">
+            <div class="card">
                 <div class="card-header">
-                    <h4>${team.name}</h4>
+                    <h5 class="mb-0">${team.name}</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
-                        ${nominations.map(nom => `
-                            <li class="list-group-item">
-                                ${nom.round}巡目: 
-                                ${nom.status === 'lost_lottery' ? 
-                                    `<s>${nom.player}</s> <span class="badge bg-warning">抽選負け</span>` : 
-                                    nom.player}
-                            </li>
-                        `).join('')}
+                        ${nominationsList || '<li class="list-group-item">指名なし</li>'}
                     </ul>
                 </div>
             </div>
