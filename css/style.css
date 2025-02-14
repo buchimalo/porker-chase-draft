@@ -6,7 +6,6 @@ body {
     background-size: contain;
     background-attachment: fixed;
     background-color: #ffffff;  /* 白背景 */
-    background-blend-mode: lighten;
     opacity: 0.9;  /* 全体の透明度 */
 }
 
