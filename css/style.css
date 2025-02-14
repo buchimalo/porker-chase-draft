@@ -20,3 +20,38 @@
 .list-group-item:hover {
   background-color: #f8f9fa;
 }
+
+/* css/style.css */
+/* チームカラー */
+.team-color-1 {
+    background-color: #FFE4E1 !important; /* 薄いピンク（哲学ひつじ） */
+}
+.team-color-2 {
+    background-color: #E0FFFF !important; /* 薄い水色（ぶちまろ） */
+}
+.team-color-3 {
+    background-color: #F0FFF0 !important; /* 薄い緑（チェス） */
+}
+.team-color-4 {
+    background-color: #FFF0F5 !important; /* ラベンダー（ダリア） */
+}
+.team-color-5 {
+    background-color: #FFFACD !important; /* 薄い黄色（欧米か） */
+}
+
+/* ホバー時の色を少し濃くする */
+.team-color-1:hover {
+    background-color: #FFD1D1 !important;
+}
+.team-color-2:hover {
+    background-color: #D1FFFF !important;
+}
+.team-color-3:hover {
+    background-color: #D1FFD1 !important;
+}
+.team-color-4:hover {
+    background-color: #FFD1F5 !important;
+}
+.team-color-5:hover {
+    background-color: #FFF5CD !important;
+}
