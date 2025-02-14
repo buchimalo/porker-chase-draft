@@ -174,3 +174,67 @@ function setLostTeams() {
 
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeMainScreen);
+
+// 結果表示機能
+function showResults() {
+    const container = document.getElementById('results-container');
+    container.innerHTML = '';
+
+    // チーム情報とドラフトデータを取得
+    db.ref('draft/teams').once('value', (snapshot) => {
+        const teamsData = snapshot.val();
+        if (teamsData) {
+            db.ref('draft/nominations').once('value', (nominationsSnapshot) => {
+                const nominationsData = nominationsSnapshot.val() || {};
+                
+                // 各チームの結果を表示
+                Object.entries(teamsData).forEach(([teamId, team]) => {
+                    const col = document.createElement('div');
+                    col.className = `col-md team-color-${teamId.replace('team', '')}`;
+                    
+                    let nominations = [];
+                    // 全ラウンドの指名を収集
+                    if (nominationsData) {
+                        for (let round = 1; round <= 6; round++) {
+                            const roundData = nominationsData[`round${round}`];
+                            if (roundData && roundData[teamId]) {
+                                nominations.push({
+                                    round: round,
+                                    player: roundData[teamId].playerName,
+                                    status: roundData[teamId].status
+                                });
+                            }
+                        }
+                    }
+
+                    // チームの結果カードを作成
+                    col.innerHTML = `
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h4>${team.name}</h4>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    ${nominations.map(nom => `
+                                        <li class="list-group-item">
+                                            ${nom.round}巡目: 
+                                            ${nom.status === 'lost_lottery' ? 
+                                                `<s>${nom.player}</s> <span class="badge bg-warning">抽選負け</span>` : 
+                                                nom.player}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+
+                    container.appendChild(col);
+                });
+
+                // モーダルを表示
+                const modal = new bootstrap.Modal(document.getElementById('resultsModal'));
+                modal.show();
+            });
+        }
+    });
+}
