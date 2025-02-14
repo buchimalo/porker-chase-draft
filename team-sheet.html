@@ -15,8 +15,13 @@
     <div class="container mt-4">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <h3 class="mb-0">第<span id="current-round">1</span>巡目</h3>
-                <h4 class="mb-0"><span id="team-name">チーム名</span> 指名シート</h4>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">第<span id="current-round">1</span>巡目</h3>
+                        <h4 class="mb-0"><span id="team-name">チーム名</span> 指名シート</h4>
+                    </div>
+                    <button class="btn btn-light" onclick="showResults()">結果一覧を表示</button>
+                </div>
             </div>
             <div class="card-body">
                 <!-- 指名入力フォーム -->
@@ -55,6 +60,24 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 結果表示モーダル -->
+            <div class="modal fade" id="resultsModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">ドラフト結果一覧</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row" id="results-container">
+                                <!-- 結果がここに表示される -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </div>
 
