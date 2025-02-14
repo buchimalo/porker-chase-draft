@@ -11,7 +11,7 @@ function initializeMainScreen() {
     });
 }
 
-// 指名リストの更新（この関数を置き換え）
+// 指名リストの更新（この関数を修正）
 function updateNominationsList(data) {
     const nominationsList = document.getElementById('nominations-list');
     nominationsList.innerHTML = '';
@@ -22,25 +22,33 @@ function updateNominationsList(data) {
     const roundData = data[`round${currentRound}`];
 
     if (roundData) {
+        // リストグループのコンテナを作成
+        const listGroup = document.createElement('div');
+        listGroup.className = 'list-group';
+        
         Object.entries(roundData).forEach(([teamId, nomination]) => {
             const listItem = document.createElement('div');
-            listItem.className = 'list-group-item';
+            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
             
             let statusBadge = '';
             if (nomination.status === 'lost_lottery') {
-                statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
+                statusBadge = '<span class="badge bg-warning">抽選負け - 再指名待ち</span>';
             }
 
             listItem.innerHTML = `
-                ${nomination.teamName}: 
-                <span class="nomination-player">
-                    ${nomination.playerName}
-                </span>
+                <div>
+                    <strong>${nomination.teamName}</strong>: 
+                    <span class="nomination-player">
+                        ${nomination.playerName || '未指名'}
+                    </span>
+                </div>
                 ${statusBadge}
             `;
             
-            nominationsList.appendChild(listItem);
+            listGroup.appendChild(listItem);
         });
+
+        nominationsList.appendChild(listGroup);
     }
 }
 
