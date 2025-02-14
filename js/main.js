@@ -8,10 +8,11 @@ function initializeMainScreen() {
     nominationsRef.on('value', (snapshot) => {
         const data = snapshot.val();
         updateNominationsList(data);
+        updateHistory(data);  // 履歴の更新を追加
     });
 }
 
-// 指名リストの更新（この関数を修正）
+// 指名リストの更新
 function updateNominationsList(data) {
     const nominationsList = document.getElementById('nominations-list');
     nominationsList.innerHTML = '';
@@ -52,7 +53,39 @@ function updateNominationsList(data) {
     }
 }
 
-// 抽選負けチームの設定（この関数を追加）
+// 指名履歴の更新
+function updateHistory(data) {
+    const historyBody = document.getElementById('history-body');
+    historyBody.innerHTML = '';
+
+    if (!data) return;
+
+    // 全ラウンドのデータを処理
+    Object.entries(data).forEach(([round, roundData]) => {
+        const roundNumber = round.replace('round', '');
+        
+        // そのラウンドの各チームの指名を表示
+        Object.entries(roundData).forEach(([teamId, nomination]) => {
+            const row = document.createElement('tr');
+            
+            let status = '完了';
+            if (nomination.status === 'lost_lottery') {
+                status = '抽選負け';
+            }
+
+            row.innerHTML = `
+                <td>${roundNumber}巡目</td>
+                <td>${nomination.teamName}</td>
+                <td>${nomination.playerName}</td>
+                <td>${status}</td>
+            `;
+            
+            historyBody.appendChild(row);
+        });
+    });
+}
+
+// 抽選負けチームの設定
 function setLostTeam() {
     const teamId = document.getElementById('lostTeamSelect').value;
     if (!teamId) return;
