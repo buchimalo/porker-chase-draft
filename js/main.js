@@ -97,19 +97,35 @@ function updateHistory(data) {
     });
 }
 
-// 抽選負けチームの設定
-function setLostTeam() {
-    const teamId = document.getElementById('lostTeamSelect').value;
-    if (!teamId) return;
+// 抽選負けチームの設定（複数対応版）
+function setLostTeams() {
+    // チェックされたチームを全て取得
+    const checkboxes = document.querySelectorAll('input[name="lostTeams"]:checked');
+    const lostTeams = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (lostTeams.length === 0) {
+        alert('抽選負けのチームを選択してください');
+        return;
+    }
 
     const currentRound = document.getElementById('current-round').textContent;
-    const roundRef = db.ref(`draft/nominations/round${currentRound}/${teamId}`);
-    
-    roundRef.update({
-        status: 'lost_lottery',
-        canReselect: true
-    }).then(() => {
-        alert('再指名権を付与しました');
+    const updates = {};
+
+    // 各チームのステータスを更新
+    lostTeams.forEach(teamId => {
+        updates[`draft/nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
+        updates[`draft/nominations/round${currentRound}/${teamId}/canReselect`] = true;
+    });
+
+    // 一括更新
+    db.ref().update(updates).then(() => {
+        const message = `${lostTeams.length}チームに再指名権を付与しました`;
+        alert(message);
+        
+        // チェックボックスをリセット
+        checkboxes.forEach(cb => cb.checked = false);
+    }).catch(error => {
+        alert('エラーが発生しました: ' + error.message);
     });
 }
 
