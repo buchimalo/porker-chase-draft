@@ -80,7 +80,7 @@ function updateDisplay(teamsData, nominationsData) {
     Object.entries(teamsData).forEach(([teamId, team]) => {
         const nomination = roundData[teamId];
         const div = document.createElement('div');
-        div.className = 'list-group-item';
+        div.className = `list-group-item team-color-${teamId.replace('team', '')}`;
 
         let playerInfo = '未指名';
         let statusBadge = '';
@@ -129,6 +129,7 @@ function updateHistory(teamsData, nominationsData) {
             if (!team) return;
 
             const row = document.createElement('tr');
+            row.className = `team-color-${teamId.replace('team', '')}`;
             let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
 
             row.innerHTML = `
