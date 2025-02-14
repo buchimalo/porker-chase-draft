@@ -148,5 +148,27 @@ function setLostTeams() {
     });
 }
 
+// ここから新規追加: 巡目変更機能 //
+function changeRound(delta) {
+    const currentRoundSpan = document.getElementById('current-round');
+    let newRound = parseInt(currentRoundSpan.textContent) + delta;
+    
+    // 1-6巡の範囲内に制限
+    if (newRound < 1) newRound = 1;
+    if (newRound > 6) newRound = 6;
+    
+    // 巡目を更新
+    currentRoundSpan.textContent = newRound;
+    
+    // データを再読み込み
+    const nominationsRef = db.ref('draft/nominations');
+    nominationsRef.once('value', (snapshot) => {
+        const data = snapshot.val();
+        updateNominationsList(data);
+        updateHistory(data);
+    });
+}
+// ここまで新規追加 //
+
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeMainScreen);
