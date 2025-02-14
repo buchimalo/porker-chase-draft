@@ -57,20 +57,27 @@ function submitNomination() {
 function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
-    const nominationRef = db.ref(`draft/nominations/round${currentRound}/${currentTeamId}`);
     
-    nominationRef.set({
-        playerName: playerName,
-        teamName: document.getElementById('team-name').textContent,
-        timestamp: Date.now(),
-        status: 'confirmed'
-    }).then(() => {
-        document.getElementById('player-name').value = '';
-        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-        modal.hide();
-        showAlert('指名を送信しました', 'success');
-    }).catch((error) => {
-        showAlert('エラーが発生しました: ' + error.message, 'danger');
+    // チーム情報を取得してから送信
+    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
+        const teamData = snapshot.val();
+        const teamName = teamData ? teamData.name : currentTeamId;
+        
+        const nominationRef = db.ref(`draft/nominations/round${currentRound}/${currentTeamId}`);
+        
+        nominationRef.set({
+            playerName: playerName,
+            teamName: teamName,
+            timestamp: Date.now(),
+            status: 'confirmed'
+        }).then(() => {
+            document.getElementById('player-name').value = '';
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+            modal.hide();
+            showAlert('指名を送信しました', 'success');
+        }).catch((error) => {
+            showAlert('エラーが発生しました: ' + error.message, 'danger');
+        });
     });
 }
 
@@ -81,26 +88,32 @@ function updateTeamHistory(nominationsData) {
 
     if (!nominationsData) return;
 
-    Object.entries(nominationsData).forEach(([round, roundData]) => {
-        if (roundData && roundData[currentTeamId]) {
-            const nomination = roundData[currentTeamId];
-            const listItem = document.createElement('div');
-            listItem.className = 'list-group-item';
-            
-            let status = '完了';
-            if (nomination.status === 'lost_lottery') {
-                status = '抽選負け';
-            }
+    // チーム情報を取得
+    db.ref(`draft/teams/${currentTeamId}`).once('value', (snapshot) => {
+        const teamData = snapshot.val();
+        const teamName = teamData ? teamData.name : currentTeamId;
 
-            listItem.innerHTML = `
-                ${round.replace('round', '')}巡目: 
-                <span class="nomination-player ${nomination.status}">
-                    ${nomination.playerName}
-                </span>
-                <span class="badge bg-secondary">${status}</span>
-            `;
-            historyContainer.appendChild(listItem);
-        }
+        Object.entries(nominationsData).forEach(([round, roundData]) => {
+            if (roundData && roundData[currentTeamId]) {
+                const nomination = roundData[currentTeamId];
+                const listItem = document.createElement('div');
+                listItem.className = 'list-group-item';
+                
+                let status = '完了';
+                if (nomination.status === 'lost_lottery') {
+                    status = '抽選負け';
+                }
+
+                listItem.innerHTML = `
+                    ${round.replace('round', '')}巡目: 
+                    <span class="nomination-player ${nomination.status}">
+                        ${nomination.playerName}
+                    </span>
+                    <span class="badge bg-secondary">${status}</span>
+                `;
+                historyContainer.appendChild(listItem);
+            }
+        });
     });
 }
 
