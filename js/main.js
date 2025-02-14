@@ -16,28 +16,27 @@ function changeRound(delta) {
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
-    // チーム情報とデータの同期取得
-    Promise.all([
-        db.ref('draft/teams').get(),
-        db.ref('draft/nominations').get()
-    ]).then(([teamsSnapshot, nominationsSnapshot]) => {
-        const teamsData = teamsSnapshot.val();
-        const nominationsData = nominationsSnapshot.val();
-        
-        // チェックボックスの更新
-        updateTeamCheckboxes(teamsData);
-        // 画面表示の更新
-        updateNominationsList(teamsData, nominationsData);
-        updateHistory(teamsData, nominationsData);
+    console.log("Initializing main screen...");
+
+    // チーム情報を取得してチェックボックスを生成
+    db.ref('draft/teams').on('value', (snapshot) => {
+        const teamsData = snapshot.val();
+        console.log("Teams data:", teamsData);
+        if (teamsData) {
+            generateTeamCheckboxes(teamsData);
+        }
     });
 
-    // リアルタイム監視を設定
+    // 指名データの監視
     db.ref('draft/nominations').on('value', (snapshot) => {
         const nominationsData = snapshot.val();
+        console.log("Nominations data:", nominationsData);
+        
+        // チーム情報と組み合わせて表示を更新
         db.ref('draft/teams').get().then((teamsSnapshot) => {
             const teamsData = teamsSnapshot.val();
-            updateNominationsList(teamsData, nominationsData);
-            updateHistory(teamsData, nominationsData);
+            displayNominations(nominationsData, teamsData);
+            displayHistory(nominationsData, teamsData);
         });
     });
 
@@ -48,95 +47,100 @@ function initializeMainScreen() {
     });
 }
 
-// チーム選択のチェックボックスを更新
-function updateTeamCheckboxes(teamsData) {
-    const container = document.querySelector('.lost-teams-checkboxes');
+// チェックボックスの生成
+function generateTeamCheckboxes(teamsData) {
+    const container = document.getElementById('team-checkboxes');
     if (!container) return;
 
-    container.innerHTML = '';
+    container.innerHTML = ''; // クリア
+
     Object.entries(teamsData).forEach(([teamId, team]) => {
-        const div = document.createElement('div');
-        div.className = 'form-check';
-        div.innerHTML = `
+        const checkbox = document.createElement('div');
+        checkbox.className = 'form-check';
+        checkbox.innerHTML = `
             <input class="form-check-input" type="checkbox" name="lostTeams" value="${teamId}" id="${teamId}Check">
             <label class="form-check-label" for="${teamId}Check">${team.name}</label>
         `;
-        container.appendChild(div);
+        container.appendChild(checkbox);
     });
 }
 
-// 指名リストの更新
-function updateNominationsList(teamsData, nominationsData) {
+// 指名状況の表示
+function displayNominations(nominationsData, teamsData) {
     const nominationsList = document.getElementById('nominations-list');
+    if (!nominationsList) return;
+
     const currentRound = document.getElementById('current-round').textContent;
-    const roundData = nominationsData[`round${currentRound}`] || {};
+    const roundData = nominationsData ? nominationsData[`round${currentRound}`] || {} : {};
 
     nominationsList.innerHTML = '';
     const listGroup = document.createElement('div');
     listGroup.className = 'list-group';
 
-    // 全チームについて処理
     Object.entries(teamsData).forEach(([teamId, team]) => {
         const nomination = roundData[teamId];
-        const div = document.createElement('div');
-        div.className = 'list-group-item d-flex justify-content-between align-items-center';
+        const item = document.createElement('div');
+        item.className = 'list-group-item';
 
-        let playerDisplay = nomination ? nomination.playerName : '未指名';
+        let playerInfo = nomination ? nomination.playerName : '未指名';
         let statusBadge = '';
 
         if (nomination && nomination.status === 'lost_lottery') {
             statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
-            playerDisplay = `<s>${playerDisplay}</s>`;
+            playerInfo = `<s>${playerInfo}</s>`;
         }
 
-        div.innerHTML = `
-            <div>
-                <strong>${team.name}</strong>: 
-                <span class="nomination-player">
-                    ${playerDisplay}
-                </span>
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${team.name}</strong>: 
+                    <span class="nomination-player">${playerInfo}</span>
+                </div>
+                ${statusBadge}
             </div>
-            ${statusBadge}
         `;
 
-        listGroup.appendChild(div);
+        listGroup.appendChild(item);
     });
 
     nominationsList.appendChild(listGroup);
 }
 
-// 指名履歴の更新
-function updateHistory(teamsData, nominationsData) {
+// 履歴の表示
+function displayHistory(nominationsData, teamsData) {
     const historyBody = document.getElementById('history-body');
+    if (!historyBody) return;
+
     historyBody.innerHTML = '';
 
-    // 各ラウンドのデータを処理
-    Object.keys(nominationsData)
-        .sort((a, b) => a.localeCompare(b))
-        .forEach(round => {
-            const roundData = nominationsData[round];
-            if (!roundData) return;
+    if (!nominationsData) return;
 
-            const roundNumber = round.replace('round', '');
+    Object.entries(nominationsData).sort().forEach(([round, roundData]) => {
+        if (!roundData) return;
 
-            Object.entries(roundData).forEach(([teamId, nomination]) => {
-                if (!nomination || !nomination.playerName) return;
+        const roundNumber = round.replace('round', '');
 
-                const row = document.createElement('tr');
-                const team = teamsData[teamId];
-                
-                let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
+        Object.entries(roundData).forEach(([teamId, nomination]) => {
+            if (!nomination || !nomination.playerName) return;
 
-                row.innerHTML = `
-                    <td>${roundNumber}巡目</td>
-                    <td>${team.name}</td>
-                    <td>${nomination.playerName}</td>
-                    <td>${status}</td>
-                `;
+            const row = document.createElement('tr');
+            const teamName = teamsData[teamId].name;
+            
+            let status = '完了';
+            if (nomination.status === 'lost_lottery') {
+                status = '抽選負け';
+            }
 
-                historyBody.appendChild(row);
-            });
+            row.innerHTML = `
+                <td>${roundNumber}巡目</td>
+                <td>${teamName}</td>
+                <td>${nomination.playerName}</td>
+                <td>${status}</td>
+            `;
+
+            historyBody.appendChild(row);
         });
+    });
 }
 
 // 抽選負けチームの設定
