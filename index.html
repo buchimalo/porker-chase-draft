@@ -27,32 +27,13 @@
                     <!-- 指名一覧 -->
                 </div>
 
-                <!-- 抽選結果入力部分を修正 -->
+               <!-- 抽選結果入力部分 -->
                 <div class="admin-controls mt-3">
                     <h4>抽選結果入力</h4>
                     <div class="form-group mb-3">
                         <label>抽選で外れたチームを選択（複数選択可）</label>
                         <div class="lost-teams-checkboxes">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="lostTeams" value="team1" id="team1Check">
-                                <label class="form-check-label" for="team1Check">チーム1</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="lostTeams" value="team2" id="team2Check">
-                                <label class="form-check-label" for="team2Check">チーム2</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="lostTeams" value="team3" id="team3Check">
-                                <label class="form-check-label" for="team3Check">チーム3</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="lostTeams" value="team4" id="team4Check">
-                                <label class="form-check-label" for="team4Check">チーム4</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="lostTeams" value="team5" id="team5Check">
-                                <label class="form-check-label" for="team5Check">チーム5</label>
-                            </div>
+                            <!-- ここは空にして、JavaScriptで動的に生成 -->
                         </div>
                         <button class="btn btn-primary mt-2" onclick="setLostTeams()">確定</button>
                     </div>
