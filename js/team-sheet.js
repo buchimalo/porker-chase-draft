@@ -17,23 +17,18 @@ function initializeTeamSheet() {
     }
 
     // チーム名の取得と表示
-    db.ref('draft/teams/' + currentTeamId).on('value', function(snapshot) {
+    db.ref('teams/' + currentTeamId).on('value', function(snapshot) {
         const teamData = snapshot.val();
         if (teamData) {
             document.getElementById('team-name').textContent = teamData.name;
+            updateTeamHistory(teamData);
         }
     });
 
     // 巡目の監視
-    db.ref('draft/currentRound').on('value', function(snapshot) {
+    db.ref('currentRound').on('value', function(snapshot) {
         const round = snapshot.val() || 1;
         document.getElementById('current-round').textContent = round;
-    });
-
-    // 指名履歴の監視
-    db.ref('draft/nominations').on('value', function(snapshot) {
-        const nominationsData = snapshot.val();
-        updateTeamHistory(nominationsData);
     });
 }
 
@@ -56,53 +51,52 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    db.ref('draft/teams/' + currentTeamId).once('value', function(snapshot) {
-        const teamData = snapshot.val();
-        const teamName = teamData ? teamData.name : currentTeamId;
-        
-        const nominationRef = db.ref('draft/nominations/round' + currentRound + '/' + currentTeamId);
-        
-        nominationRef.set({
-            playerName: playerName,
-            teamName: teamName,
-            timestamp: Date.now(),
-            status: 'confirmed'
-        }).then(function() {
+    const playerData = {
+        name: playerName,
+        round: currentRound,
+        timestamp: Date.now(),
+        status: 'confirmed'
+    };
+
+    // playersノードに追加
+    const newPlayerRef = db.ref('teams/' + currentTeamId + '/players').push();
+    
+    newPlayerRef.set(playerData)
+        .then(function() {
             document.getElementById('player-name').value = '';
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
             modal.hide();
             showAlert('指名を送信しました', 'success');
-        }).catch(function(error) {
+        })
+        .catch(function(error) {
             showAlert('エラーが発生しました: ' + error.message, 'danger');
         });
-    });
 }
 
 // チームの指名履歴を更新
-function updateTeamHistory(nominationsData) {
+function updateTeamHistory(teamData) {
     const historyContainer = document.getElementById('team-history');
-    if (!historyContainer || !nominationsData) return;
+    if (!historyContainer) return;
 
     historyContainer.innerHTML = '';
 
-    Object.entries(nominationsData).forEach(function([round, roundData]) {
-        if (roundData && roundData[currentTeamId]) {
-            const nomination = roundData[currentTeamId];
+    if (teamData.players) {
+        Object.entries(teamData.players).forEach(function([playerId, player]) {
             const listItem = document.createElement('div');
             listItem.className = 'list-group-item';
             
-            let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
+            let status = player.status === 'lost_lottery' ? '抽選負け' : '完了';
 
             listItem.innerHTML = 
-                round.replace('round', '') + '巡目: ' +
-                '<span class="nomination-player ' + nomination.status + '">' +
-                nomination.playerName +
+                player.round + '巡目: ' +
+                '<span class="nomination-player ' + player.status + '">' +
+                player.name +
                 '</span>' +
                 '<span class="badge bg-secondary ms-2">' + status + '</span>';
             
             historyContainer.appendChild(listItem);
-        }
-    });
+        });
+    }
 }
 
 // アラート表示
@@ -120,6 +114,11 @@ function showAlert(message, type) {
         alertDiv.remove();
     }, 3000);
 }
+
+// デバッグ用：データ確認
+db.ref('teams/' + getTeamIdFromUrl()).once('value', (snapshot) => {
+    console.log('現在のチームデータ:', snapshot.val());
+});
 
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeTeamSheet);
