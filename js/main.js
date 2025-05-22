@@ -129,8 +129,9 @@ function setLostTeams() {
         });
 }
 
+// ドラフトリセット機能
 function resetDraft() {
-    if (confirm('本当にドラフトをリセットしますか？この操作は取り消せません。')) {
+    if (confirm('本当にドラフトをリセットしますか？\n全チームの指名選手が削除されます。\nこの操作は取り消せません。')) {
         db.ref('teams').once('value', (snapshot) => {
             const teams = snapshot.val();
             const updates = {};
@@ -140,11 +141,18 @@ function resetDraft() {
             });
             
             db.ref().update(updates)
-                .then(() => alert('ドラフトがリセットされました'))
-                .catch(error => alert('エラー: ' + error.message));
+                .then(() => {
+                    alert('ドラフトがリセットされました');
+                    location.reload(); // ページを再読み込み
+                })
+                .catch(error => {
+                    console.error('Reset error:', error);
+                    alert('エラーが発生しました: ' + error.message);
+                });
         });
     }
 }
+
 
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeMainScreen);
