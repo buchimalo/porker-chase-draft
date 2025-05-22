@@ -9,24 +9,39 @@ function changeRound(delta) {
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    currentRoundSpan.textContent = newRound;
-    db.ref('currentRound').set(newRound);
+    db.ref('draft/currentRound').set(newRound);
 }
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
     // チーム情報を取得
-    db.ref('teams').on('value', (snapshot) => {
+    db.ref('draft/teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
         if (teamsData) {
             // チェックボックスを更新
             updateTeamCheckboxes(teamsData);
-            updateDisplay(teamsData);
+            
+            // 指名データも取得して表示を更新
+            db.ref('draft/nominations').once('value', (nominationsSnapshot) => {
+                const nominationsData = nominationsSnapshot.val() || {};
+                updateDisplay(teamsData, nominationsData);
+            });
         }
     });
 
+    // 指名データの監視
+    db.ref('draft/nominations').on('value', (snapshot) => {
+        const nominationsData = snapshot.val();
+        db.ref('draft/teams').once('value', (teamsSnapshot) => {
+            const teamsData = teamsSnapshot.val();
+            if (teamsData) {
+                updateDisplay(teamsData, nominationsData);
+            }
+        });
+    });
+
     // 巡目の監視
-    db.ref('currentRound').on('value', (snapshot) => {
+    db.ref('draft/currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
         document.getElementById('current-round').textContent = round;
     });
@@ -50,7 +65,11 @@ function updateTeamCheckboxes(teamsData) {
 }
 
 // 画面表示の更新
-function updateDisplay(teamsData) {
+function updateDisplay(teamsData, nominationsData) {
+    const currentRound = document.getElementById('current-round').textContent;
+    const roundData = nominationsData ? nominationsData[`round${currentRound}`] || {} : {};
+
+    // 指名リストの更新
     const nominationsList = document.getElementById('nominations-list');
     if (!nominationsList) return;
 
@@ -59,17 +78,28 @@ function updateDisplay(teamsData) {
     listGroup.className = 'list-group';
 
     Object.entries(teamsData).forEach(([teamId, team]) => {
+        const nomination = roundData[teamId];
         const div = document.createElement('div');
         div.className = 'list-group-item';
+
+        let playerInfo = '未指名';
+        let statusBadge = '';
+
+        if (nomination) {
+            playerInfo = nomination.playerName;
+            if (nomination.status === 'lost_lottery') {
+                statusBadge = '<span class="badge bg-warning ms-2">抽選負け - 再指名待ち</span>';
+                playerInfo = `<s>${playerInfo}</s>`;
+            }
+        }
 
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <strong>${team.name}</strong>: 
-                    <span class="nomination-player">
-                        ${team.players ? Object.values(team.players).map(p => p.name).join(', ') : '未指名'}
-                    </span>
+                    <span class="nomination-player">${playerInfo}</span>
                 </div>
+                ${statusBadge}
             </div>
         `;
 
@@ -77,29 +107,38 @@ function updateDisplay(teamsData) {
     });
 
     nominationsList.appendChild(listGroup);
-    updateHistory(teamsData);
+    updateHistory(teamsData, nominationsData);
 }
 
 // 履歴の更新
-function updateHistory(teamsData) {
+function updateHistory(teamsData, nominationsData) {
     const historyBody = document.getElementById('history-body');
-    if (!historyBody) return;
+    if (!historyBody || !nominationsData) return;
 
     historyBody.innerHTML = '';
+    
+    Object.entries(nominationsData).sort().forEach(([round, roundData]) => {
+        if (!roundData) return;
 
-    Object.entries(teamsData).forEach(([teamId, team]) => {
-        if (team.players) {
-            Object.entries(team.players).forEach(([playerId, player]) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${player.round || '-'}巡目</td>
-                    <td>${team.name}</td>
-                    <td>${player.name}</td>
-                    <td>完了</td>
-                `;
-                historyBody.appendChild(row);
-            });
-        }
+        const roundNumber = round.replace('round', '');
+        Object.entries(roundData).forEach(([teamId, nomination]) => {
+            if (!nomination || !nomination.playerName) return;
+
+            const team = teamsData[teamId];
+            if (!team) return;
+
+            const row = document.createElement('tr');
+            let status = nomination.status === 'lost_lottery' ? '抽選負け' : '完了';
+
+            row.innerHTML = `
+                <td>${roundNumber}巡目</td>
+                <td>${team.name}</td>
+                <td>${nomination.playerName}</td>
+                <td>${status}</td>
+            `;
+
+            historyBody.appendChild(row);
+        });
     });
 }
 
@@ -113,9 +152,12 @@ function setLostTeams() {
         return;
     }
 
+    const currentRound = document.getElementById('current-round').textContent;
     const updates = {};
+
     lostTeams.forEach(teamId => {
-        updates[`teams/${teamId}/status`] = 'lost_lottery';
+        updates[`draft/nominations/round${currentRound}/${teamId}/status`] = 'lost_lottery';
+        updates[`draft/nominations/round${currentRound}/${teamId}/canReselect`] = true;
     });
 
     db.ref().update(updates)
@@ -131,8 +173,3 @@ function setLostTeams() {
 
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeMainScreen);
-
-// デバッグ用：データ確認
-db.ref('teams').once('value', (snapshot) => {
-    console.log('現在のチームデータ:', snapshot.val());
-});
