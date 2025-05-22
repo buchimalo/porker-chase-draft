@@ -129,6 +129,23 @@ function setLostTeams() {
         });
 }
 
+function resetDraft() {
+    if (confirm('本当にドラフトをリセットしますか？この操作は取り消せません。')) {
+        db.ref('teams').once('value', (snapshot) => {
+            const teams = snapshot.val();
+            const updates = {};
+            
+            Object.keys(teams).forEach(teamId => {
+                updates[`teams/${teamId}/players`] = null;
+            });
+            
+            db.ref().update(updates)
+                .then(() => alert('ドラフトがリセットされました'))
+                .catch(error => alert('エラー: ' + error.message));
+        });
+    }
+}
+
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeMainScreen);
 
