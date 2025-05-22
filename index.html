@@ -111,18 +111,6 @@ database.ref('.info/connected').on('value', function(snap) {
         console.log('データベースに接続しました');
     }
 });
-
-// データベースの動作テスト
-database.ref('test').set({
-    timestamp: Date.now(),
-    message: 'テスト接続'
-})
-.then(() => {
-    console.log('テストデータの書き込みに成功しました');
-})
-.catch((error) => {
-    console.error('エラー:', error);
-});
 </script>
 
 <script src="js/main.js"></script>
