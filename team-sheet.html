@@ -87,22 +87,28 @@
     <!-- Firebase SDKの読み込み -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
     <!-- Firebase Config -->
     <script>
-    // 既存の設定をそのまま使用
     const firebaseConfig = {
-        apiKey: "AIzaSyBmBLBHx2gJdq-MpLxrpPDJVsDO5GP8YVM",
-        authDomain: "draft-test-bb0ed.firebaseapp.com",
-        databaseURL: "https://draft-test-bb0ed-default-rtdb.firebaseio.com",
-        projectId: "draft-test-bb0ed",
-        storageBucket: "draft-test-bb0ed.appspot.com",
-        messagingSenderId: "1060592987230",
-        appId: "1:1060592987230:web:16a9305992b820ced7c1a3"
+        apiKey: "AIzaSyCpbFz9odW0pjM67RBKi1g3K__-H5tAaqk",
+        authDomain: "porker-chase-draft.firebaseapp.com",
+        databaseURL: "https://porker-chase-draft-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "porker-chase-draft",
+        storageBucket: "porker-chase-draft.firebasestorage.app",
+        messagingSenderId: "1017710444956",
+        appId: "1:1017710444956:web:f9538ef485beb7b7074859",
+        measurementId: "G-HKFTDR6SK0"
     };
     
     // Firebaseの初期化
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+    
+    // 接続テスト
+    database.ref('.info/connected').on('value', function(snap) {
+        console.log('接続状態:', snap.val());
+    });
     </script>
     
     <script src="js/team-sheet.js"></script>
