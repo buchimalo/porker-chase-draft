@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ドラフト会議 結果一覧</title>
+    <title>ドラフト結果</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="container mt-4">
-        <h2 class="mb-4">ドラフト結果一覧</h2>
-        <div class="row" id="results-container">
-            <!-- チームごとの結果がここに動的に追加される -->
+        <h1 class="mb-4">ドラフト結果</h1>
+        
+        <div id="results-container" class="row">
+            <!-- 結果はJavaScriptで動的に生成 -->
         </div>
     </div>
 
@@ -23,38 +20,24 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Firebase SDKの読み込み -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<!-- Firebase Config -->
-<script>
-// 重複初期化を防ぐ
-if (typeof firebase === 'undefined' || !firebase.apps.length) {
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Firebase Config -->
+    <script>
     const firebaseConfig = {
-        apiKey: "AIzaSyCpbFz9odW0pjM67RBKi1g3K__-H5tAaqk",
-        authDomain: "porker-chase-draft.firebaseapp.com",
-        databaseURL: "https://porker-chase-draft-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "porker-chase-draft",
-        storageBucket: "porker-chase-draft.firebasestorage.app",
-        messagingSenderId: "1017710444956",
-        appId: "1:1017710444956:web:f9538ef485beb7b7074859",
-        measurementId: "G-HKFTDR6SK0"
+        apiKey: "AIzaSyBmBLBHx2gJdq-MpLxrpPDJVsDO5GP8YVM",
+        authDomain: "draft-test-bb0ed.firebaseapp.com",
+        databaseURL: "https://draft-test-bb0ed-default-rtdb.firebaseio.com",
+        projectId: "draft-test-bb0ed",
+        storageBucket: "draft-test-bb0ed.appspot.com",
+        messagingSenderId: "1060592987230",
+        appId: "1:1060592987230:web:16a9305992b820ced7c1a3"
     };
-
+    
     firebase.initializeApp(firebaseConfig);
-}
-
-const database = firebase.database();
-
-// データベース接続確認
-database.ref('.info/connected').on('value', function(snap) {
-    console.log('接続状態:', snap.val());
-    if (snap.val() === true) {
-        console.log('データベースに接続しました');
-    }
-});
-</script>
-
-<script src="js/draft-results.js"></script>
+    const database = firebase.database();
+    </script>
+    
+    <script src="js/draft-results.js"></script>
 </body>
 </html>
