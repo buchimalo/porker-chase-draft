@@ -55,59 +55,57 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    // チーム情報を取得してから保存
-    db.ref('teams/' + currentTeamId).once('value', function(snapshot) {
-        const teamData = snapshot.val();
-        
-        const playerData = {
-            name: playerName,  // playerNameではなくnameを使用
-            round: currentRound,
-            timestamp: Date.now(),
-            status: 'confirmed'
-        };
+    console.log('指名開始:', playerName, '巡目:', currentRound); // デバッグ用
 
-        // playersノードに追加
-        const newPlayerRef = db.ref('teams/' + currentTeamId + '/players').push();
-        
-        newPlayerRef.set(playerData)
-            .then(function() {
-                document.getElementById('player-name').value = '';
-                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-                modal.hide();
-                showAlert('指名を送信しました', 'success');
-            })
-            .catch(function(error) {
-                showAlert('エラーが発生しました: ' + error.message, 'danger');
-            });
-    });
+    const playerData = {
+        playerName: playerName,  // playerNameとして保存
+        name: playerName,        // nameとしても保存
+        round: currentRound,
+        timestamp: Date.now(),
+        status: 'confirmed'
+    };
+
+    console.log('保存するデータ:', playerData); // デバッグ用
+
+    // playersノードに追加
+    const newPlayerRef = db.ref('teams/' + currentTeamId + '/players').push();
+    
+    newPlayerRef.set(playerData)
+        .then(function() {
+            console.log('指名データ保存成功:', playerData); // デバッグ用
+            document.getElementById('player-name').value = '';
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+            modal.hide();
+            showAlert('指名を送信しました', 'success');
+        })
+        .catch(function(error) {
+            console.error('指名データ保存エラー:', error); // デバッグ用
+            showAlert('エラーが発生しました: ' + error.message, 'danger');
+        });
 }
 
-// チームの指名履歴を更新
-function updateTeamHistory(teamData) {
-    const historyContainer = document.getElementById('team-history');
-    if (!historyContainer) return;
+// 履歴の更新
+function updateHistory(teamsData) {
+    const historyBody = document.getElementById('history-body');
+    if (!historyBody) return;
 
-    historyContainer.innerHTML = '';
+    historyBody.innerHTML = '';
 
-    if (teamData.players) {
-        Object.entries(teamData.players)
-            .sort((a, b) => a[1].round - b[1].round) // 巡目順にソート
-            .forEach(function([playerId, player]) {
-                const listItem = document.createElement('div');
-                listItem.className = 'list-group-item';
-                
-                let status = player.status === 'lost_lottery' ? '抽選負け' : '完了';
-
-                listItem.innerHTML = 
-                    player.round + '巡目: ' +
-                    '<span class="nomination-player ' + player.status + '">' +
-                    player.name +  // playerNameではなくnameを使用
-                    '</span>' +
-                    '<span class="badge bg-secondary ms-2">' + status + '</span>';
-                
-                historyContainer.appendChild(listItem);
+    Object.entries(teamsData).forEach(([teamId, team]) => {
+        if (team.players) {
+            Object.entries(team.players).forEach(([playerId, player]) => {
+                console.log('プレイヤーデータ:', player); // デバッグ用
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${player.round || '-'}巡目</td>
+                    <td>${team.name || '-'}</td>
+                    <td>${player.playerName || player.name || '-'}</td>
+                    <td>${player.status === 'lost_lottery' ? '抽選負け' : '完了'}</td>
+                `;
+                historyBody.appendChild(row);
             });
-    }
+        }
+    });
 }
 
 // アラート表示
