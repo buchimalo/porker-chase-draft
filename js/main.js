@@ -1,6 +1,16 @@
 // js/main.js
 const db = firebase.database();
 
+// デバッグ用：接続確認
+db.ref('.info/connected').on('value', (snap) => {
+    console.log('データベース接続状態:', snap.val());
+});
+
+// データ構造確認
+db.ref('/').once('value', (snapshot) => {
+    console.log('ルートデータ:', snapshot.val());
+});
+
 // 巡目変更機能
 function changeRound(delta) {
     const currentRoundSpan = document.getElementById('current-round');
@@ -10,14 +20,20 @@ function changeRound(delta) {
     if (newRound > 6) newRound = 6;
     
     currentRoundSpan.textContent = newRound;
-    db.ref('draft/currentRound').set(newRound);
+    // ルートとdraftの両方に設定
+    const updates = {
+        '/currentRound': newRound,
+        '/draft/currentRound': newRound
+    };
+    db.ref().update(updates);
 }
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
     // チーム情報を取得
-    db.ref('draft/teams').on('value', (snapshot) => {
+    db.ref('/draft/teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
+        console.log('チームデータ取得:', teamsData);
         if (teamsData) {
             // チェックボックスを更新
             updateTeamCheckboxes(teamsData);
@@ -25,8 +41,8 @@ function initializeMainScreen() {
         }
     });
 
-    // 巡目の監視
-    db.ref('draft/currentRound').on('value', (snapshot) => {
+    // 巡目の監視（ルートパス）
+    db.ref('/currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
         document.getElementById('current-round').textContent = round;
     });
