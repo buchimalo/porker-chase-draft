@@ -50,47 +50,36 @@ function initializeTeamSheet() {
     });
 }
 
-// 指名送信前の確認
-function submitNomination() {
-    const playerName = document.getElementById('player-name').value.trim();
-    
-    if (!playerName) {
-        showAlert('選手名を入力してください', 'danger');
-        return;
-    }
-
-    document.getElementById('confirmPlayerName').textContent = playerName;
-    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-    modal.show();
-}
-
 // 指名の確定送信
 function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    const playerData = {
-        name: playerName,      // nameをplayerNameに変更しない
-        round: currentRound,
-        timestamp: Date.now(),
-        status: 'confirmed'
-    };
+    // チーム情報を取得してから保存
+    db.ref('teams/' + currentTeamId).once('value', function(snapshot) {
+        const teamData = snapshot.val();
+        
+        const playerData = {
+            name: playerName,  // playerNameではなくnameを使用
+            round: currentRound,
+            timestamp: Date.now(),
+            status: 'confirmed'
+        };
 
-    // playersノードに追加
-    const newPlayerRef = db.ref('teams/' + currentTeamId + '/players').push();
-    
-    newPlayerRef.set(playerData)
-        .then(function() {
-            document.getElementById('player-name').value = '';
-            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-            modal.hide();
-            showAlert('指名を送信しました', 'success');
-            console.log('指名データ保存成功'); // デバッグ用
-        })
-        .catch(function(error) {
-            console.error('指名データ保存エラー:', error); // デバッグ用
-            showAlert('エラーが発生しました: ' + error.message, 'danger');
-        });
+        // playersノードに追加
+        const newPlayerRef = db.ref('teams/' + currentTeamId + '/players').push();
+        
+        newPlayerRef.set(playerData)
+            .then(function() {
+                document.getElementById('player-name').value = '';
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+                modal.hide();
+                showAlert('指名を送信しました', 'success');
+            })
+            .catch(function(error) {
+                showAlert('エラーが発生しました: ' + error.message, 'danger');
+            });
+    });
 }
 
 // チームの指名履歴を更新
