@@ -69,30 +69,41 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
-    console.log('指名確定 - 選手名:', playerName, '巡目:', currentRound); // デバッグ用
+    // チーム情報を取得
+    db.ref('teams/' + currentTeamId).once('value', function(snapshot) {
+        const teamData = snapshot.val();
+        const teamName = teamData ? teamData.name : currentTeamId;
+        
+        // 指名データを作成
+        const nominationData = {
+            playerName: playerName,
+            teamName: teamName,
+            timestamp: Date.now(),
+            status: 'confirmed',
+            round: currentRound
+        };
 
-    const playerData = {
-        name: playerName,
-        round: currentRound,
-        timestamp: Date.now(),
-        status: 'confirmed'
-    };
+        // 指名を保存（両方のパスに保存）
+        const updates = {};
+        // チームのplayersに保存
+        const newPlayerKey = db.ref().child('teams').child(currentTeamId).child('players').push().key;
+        updates[`teams/${currentTeamId}/players/${newPlayerKey}`] = nominationData;
+        // nominationsにも保存
+        updates[`nominations/round${currentRound}/${currentTeamId}`] = nominationData;
 
-    // playersノードに追加
-    const newPlayerRef = db.ref('teams/' + currentTeamId + '/players').push();
-    
-    newPlayerRef.set(playerData)
-        .then(function() {
-            document.getElementById('player-name').value = '';
-            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-            modal.hide();
-            showAlert('指名を送信しました', 'success');
-            console.log('指名データ保存成功'); // デバッグ用
-        })
-        .catch(function(error) {
-            console.error('指名データ保存エラー:', error); // デバッグ用
-            showAlert('エラーが発生しました: ' + error.message, 'danger');
-        });
+        db.ref().update(updates)
+            .then(function() {
+                document.getElementById('player-name').value = '';
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+                modal.hide();
+                showAlert('指名を送信しました', 'success');
+                console.log('指名データ保存成功'); // デバッグ用
+            })
+            .catch(function(error) {
+                showAlert('エラーが発生しました: ' + error.message, 'danger');
+                console.error('指名データ保存エラー:', error); // デバッグ用
+            });
+    });
 }
 
 // チームの指名履歴を更新
@@ -116,7 +127,7 @@ function updateTeamHistory(teamData) {
             listItem.innerHTML = 
                 player.round + '巡目: ' +
                 '<span class="nomination-player ' + player.status + '">' +
-                player.name +
+                (player.playerName || player.name) + // playerNameとnameの両方に対応
                 '</span>' +
                 '<span class="badge bg-secondary ms-2">' + status + '</span>';
             
