@@ -9,13 +9,14 @@ function changeRound(delta) {
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    db.ref('draft/currentRound').set(newRound);
+    currentRoundSpan.textContent = newRound;
+    db.ref('currentRound').set(newRound);
 }
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
     // チーム情報を取得
-    db.ref('draft/teams').on('value', (snapshot) => {
+    db.ref('teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
         if (teamsData) {
             // チェックボックスを更新
@@ -25,7 +26,7 @@ function initializeMainScreen() {
     });
 
     // 巡目の監視
-    db.ref('draft/currentRound').on('value', (snapshot) => {
+    db.ref('currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
         document.getElementById('current-round').textContent = round;
     });
@@ -114,7 +115,7 @@ function setLostTeams() {
 
     const updates = {};
     lostTeams.forEach(teamId => {
-        updates[`draft/teams/${teamId}/status`] = 'lost_lottery';
+        updates[`teams/${teamId}/status`] = 'lost_lottery';
     });
 
     db.ref().update(updates)
@@ -128,5 +129,35 @@ function setLostTeams() {
         });
 }
 
+// ドラフトリセット機能
+function resetDraft() {
+    if (confirm('本当にドラフトをリセットしますか？\n全チームの指名選手が削除されます。\nこの操作は取り消せません。')) {
+        db.ref('teams').once('value', (snapshot) => {
+            const teams = snapshot.val();
+            const updates = {};
+            
+            Object.keys(teams).forEach(teamId => {
+                updates[`teams/${teamId}/players`] = null;
+            });
+            
+            db.ref().update(updates)
+                .then(() => {
+                    alert('ドラフトがリセットされました');
+                    location.reload(); // ページを再読み込み
+                })
+                .catch(error => {
+                    console.error('Reset error:', error);
+                    alert('エラーが発生しました: ' + error.message);
+                });
+        });
+    }
+}
+
+
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeMainScreen);
+
+// デバッグ用：データ確認
+db.ref('teams').once('value', (snapshot) => {
+    console.log('現在のチームデータ:', snapshot.val());
+});
