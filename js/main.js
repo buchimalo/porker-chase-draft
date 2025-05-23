@@ -1,5 +1,5 @@
 // js/main.js
-const db = firebase.database();
+const db = window.database;
 
 // 巡目変更機能
 function changeRound(delta) {
