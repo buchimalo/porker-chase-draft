@@ -5,7 +5,9 @@ let currentTeamId = null;
 // チームIDをURLから取得
 function getTeamIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('team');
+    const teamId = urlParams.get('team');
+    console.log('取得したチームID:', teamId); // デバッグ用
+    return teamId;
 }
 
 // チーム情報の初期化
@@ -16,19 +18,35 @@ function initializeTeamSheet() {
         return;
     }
 
+    console.log('初期化開始 - チームID:', currentTeamId); // デバッグ用
+
     // チーム名の取得と表示
     db.ref('teams/' + currentTeamId).on('value', function(snapshot) {
         const teamData = snapshot.val();
+        console.log('取得したチームデータ:', teamData); // デバッグ用
+        
         if (teamData) {
-            document.getElementById('team-name').textContent = teamData.name;
+            const teamNameElement = document.getElementById('team-name');
+            if (teamNameElement) {
+                teamNameElement.textContent = teamData.name;
+                console.log('チーム名を設定:', teamData.name); // デバッグ用
+            } else {
+                console.error('team-name要素が見つかりません'); // デバッグ用
+            }
             updateTeamHistory(teamData);
+        } else {
+            console.error('チームデータが取得できません'); // デバッグ用
         }
     });
 
     // 巡目の監視
     db.ref('currentRound').on('value', function(snapshot) {
         const round = snapshot.val() || 1;
-        document.getElementById('current-round').textContent = round;
+        const roundElement = document.getElementById('current-round');
+        if (roundElement) {
+            roundElement.textContent = round;
+            console.log('現在の巡目:', round); // デバッグ用
+        }
     });
 }
 
@@ -51,6 +69,8 @@ function confirmNomination() {
     const playerName = document.getElementById('player-name').value.trim();
     const currentRound = document.getElementById('current-round').textContent;
     
+    console.log('指名確定 - 選手名:', playerName, '巡目:', currentRound); // デバッグ用
+
     const playerData = {
         name: playerName,
         round: currentRound,
@@ -67,8 +87,10 @@ function confirmNomination() {
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
             modal.hide();
             showAlert('指名を送信しました', 'success');
+            console.log('指名データ保存成功'); // デバッグ用
         })
         .catch(function(error) {
+            console.error('指名データ保存エラー:', error); // デバッグ用
             showAlert('エラーが発生しました: ' + error.message, 'danger');
         });
 }
@@ -76,9 +98,13 @@ function confirmNomination() {
 // チームの指名履歴を更新
 function updateTeamHistory(teamData) {
     const historyContainer = document.getElementById('team-history');
-    if (!historyContainer) return;
+    if (!historyContainer) {
+        console.error('team-history要素が見つかりません'); // デバッグ用
+        return;
+    }
 
     historyContainer.innerHTML = '';
+    console.log('履歴更新 - チームデータ:', teamData); // デバッグ用
 
     if (teamData.players) {
         Object.entries(teamData.players).forEach(function([playerId, player]) {
@@ -108,16 +134,20 @@ function showAlert(message, type) {
         '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
     
     const container = document.querySelector('.nomination-form');
-    container.insertBefore(alertDiv, container.firstChild);
-    
-    setTimeout(function() {
-        alertDiv.remove();
-    }, 3000);
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        setTimeout(function() {
+            alertDiv.remove();
+        }, 3000);
+    } else {
+        console.error('nomination-form要素が見つかりません'); // デバッグ用
+    }
 }
 
-// デバッグ用：データ確認
-db.ref('teams/' + getTeamIdFromUrl()).once('value', (snapshot) => {
-    console.log('現在のチームデータ:', snapshot.val());
+// リアルタイムデータ監視の設定
+db.ref('teams/' + getTeamIdFromUrl()).on('value', (snapshot) => {
+    console.log('リアルタイム更新 - チームデータ:', snapshot.val()); // デバッグ用
 });
 
 // 画面読み込み時に初期化
