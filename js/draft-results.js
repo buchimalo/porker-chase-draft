@@ -2,82 +2,69 @@
 const db = firebase.database();
 
 function initializeResults() {
-    console.log('結果初期化開始'); // デバッグ用
-    
     // チーム情報を取得
     db.ref('teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
-        console.log('取得したチームデータ:', teamsData); // デバッグ用
-        
         if (teamsData) {
-            updateResults(teamsData);
-        } else {
-            console.log('チームデータが存在しません'); // デバッグ用
+            displayResults(teamsData);
         }
     });
 }
 
-function updateResults(teamsData) {
+function displayResults(teamsData) {
     const container = document.getElementById('results-container');
     if (!container) {
-        console.error('results-container要素が見つかりません'); // デバッグ用
+        console.error('results-container not found');
         return;
     }
     
-    console.log('結果更新開始'); // デバッグ用
     container.innerHTML = '';
+    const row = document.createElement('div');
+    row.className = 'row';
 
-    // 各チームの結果を表示
     Object.entries(teamsData).forEach(([teamId, team]) => {
-        console.log(`チーム処理: ${teamId}`, team); // デバッグ用
-        
         const col = document.createElement('div');
-        col.className = `col-md team-color-${teamId.replace('team', '')}`;
-        
-        // 指名選手を巡目順にソート
-        let players = [];
+        col.className = 'col-md-4 mb-4';
+
+        let playersList = '';
         if (team.players) {
-            players = Object.entries(team.players)
-                .map(([playerId, player]) => player)
-                .sort((a, b) => a.round - b.round);
+            const sortedPlayers = Object.entries(team.players)
+                .map(([_, player]) => player)
+                .sort((a, b) => Number(a.round) - Number(b.round));
+
+            playersList = sortedPlayers.map(player => `
+                <li class="list-group-item">
+                    ${player.round}巡目: ${player.name}
+                    ${player.status === 'lost_lottery' ? 
+                        '<span class="badge bg-warning ms-2">抽選負け</span>' : 
+                        ''}
+                </li>
+            `).join('');
         }
-        
-        // チームの結果カードを作成
+
         col.innerHTML = `
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4>${team.name || 'チーム名なし'}</h4>
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">${team.name}</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
-                        ${players.length > 0 
-                            ? players.map(player => `
-                                <li class="list-group-item">
-                                    ${player.round}巡目: ${player.name}
-                                    ${player.status === 'lost_lottery' 
-                                        ? '<span class="badge bg-warning ms-2">抽選負け</span>' 
-                                        : ''}
-                                </li>
-                            `).join('')
-                            : '<li class="list-group-item">指名選手なし</li>'}
+                        ${playersList || '<li class="list-group-item">指名選手なし</li>'}
                     </ul>
                 </div>
             </div>
         `;
 
-        container.appendChild(col);
+        row.appendChild(col);
     });
-    
-    console.log('結果更新完了'); // デバッグ用
+
+    container.appendChild(row);
 }
 
-// リアルタイムデータ監視
-db.ref('teams').on('value', (snapshot) => {
-    console.log('リアルタイム更新 - チームデータ:', snapshot.val()); // デバッグ用
-});
-
 // 画面読み込み時に初期化
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('ページ読み込み完了'); // デバッグ用
-    initializeResults();
+document.addEventListener('DOMContentLoaded', initializeResults);
+
+// デバッグ用：データ取得の確認
+db.ref('teams').once('value', (snapshot) => {
+    console.log('現在のチームデータ:', snapshot.val());
 });
