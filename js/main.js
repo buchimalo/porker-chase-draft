@@ -89,16 +89,18 @@ function updateHistory(teamsData) {
 
     Object.entries(teamsData).forEach(([teamId, team]) => {
         if (team.players) {
-            Object.entries(team.players).forEach(([playerId, player]) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${player.round || '-'}巡目</td>
-                    <td>${team.name}</td>
-                    <td>${player.name}</td>
-                    <td>完了</td>
-                `;
-                historyBody.appendChild(row);
-            });
+            Object.entries(team.players)
+                .sort((a, b) => a[1].round - b[1].round) // 巡目順にソート
+                .forEach(([playerId, player]) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${player.round}巡目</td>
+                        <td>${team.name}</td>
+                        <td>${player.name}</td>
+                        <td>${player.status === 'lost_lottery' ? '抽選負け' : '完了'}</td>
+                    `;
+                    historyBody.appendChild(row);
+                });
         }
     });
 }
