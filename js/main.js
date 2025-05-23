@@ -132,24 +132,33 @@ function setLostTeams() {
 // ドラフトリセット機能
 function resetDraft() {
     if (confirm('本当にドラフトをリセットしますか？\n全チームの指名選手が削除されます。\nこの操作は取り消せません。')) {
-        db.ref('teams').once('value', (snapshot) => {
-            const teams = snapshot.val();
-            const updates = {};
-            
-            Object.keys(teams).forEach(teamId => {
-                updates[`teams/${teamId}/players`] = null;
-            });
-            
-            db.ref().update(updates)
-                .then(() => {
-                    alert('ドラフトがリセットされました');
-                    location.reload(); // ページを再読み込み
-                })
-                .catch(error => {
-                    console.error('Reset error:', error);
-                    alert('エラーが発生しました: ' + error.message);
+        // まず、全チームのデータを取得
+        db.ref('teams').once('value')
+            .then((snapshot) => {
+                const teams = snapshot.val();
+                if (!teams) {
+                    throw new Error('チームデータが見つかりません');
+                }
+
+                // 各チームのplayersを削除するupdatesを作成
+                const updates = {};
+                Object.keys(teams).forEach(teamId => {
+                    updates[`teams/${teamId}/players`] = null;
+                    updates[`teams/${teamId}/status`] = null;
                 });
-        });
+
+                // 一括更新を実行
+                return db.ref().update(updates);
+            })
+            .then(() => {
+                console.log('リセット成功'); // デバッグ用
+                alert('ドラフトがリセットされました');
+                location.reload(); // ページを再読み込み
+            })
+            .catch((error) => {
+                console.error('リセットエラー:', error); // デバッグ用
+                alert('リセット中にエラーが発生しました: ' + error.message);
+            });
     }
 }
 
