@@ -89,19 +89,19 @@
 
 <!-- Firebase Config -->
 <script>
-// 重複初期化を防ぐ
-if (typeof firebase === 'undefined' || !firebase.apps.length) {
-    const firebaseConfig = {
-        apiKey: "AIzaSyCpbFz9odW0pjM67RBKi1g3K__-H5tAaqk",
-        authDomain: "porker-chase-draft.firebaseapp.com",
-        databaseURL: "https://porker-chase-draft-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "porker-chase-draft",
-        storageBucket: "porker-chase-draft.firebasestorage.app",
-        messagingSenderId: "1017710444956",
-        appId: "1:1017710444956:web:f9538ef485beb7b7074859",
-        measurementId: "G-HKFTDR6SK0"
-    };
+const firebaseConfig = {
+    apiKey: "AIzaSyCpbFz9odW0pjM67RBKi1g3K__-H5tAaqk",
+    authDomain: "porker-chase-draft.firebaseapp.com",
+    databaseURL: "https://porker-chase-draft-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "porker-chase-draft",
+    storageBucket: "porker-chase-draft.firebasestorage.app",
+    messagingSenderId: "1017710444956",
+    appId: "1:1017710444956:web:f9538ef485beb7b7074859",
+    measurementId: "G-HKFTDR6SK0"
+};
 
+// 初期化されていない場合のみ初期化
+if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 
@@ -112,9 +112,30 @@ database.ref('.info/connected').on('value', function(snap) {
     console.log('接続状態:', snap.val());
     if (snap.val() === true) {
         console.log('データベースに接続しました');
+        
+        // 初期データの設定（データが存在しない場合）
+        database.ref('teams').once('value', function(snapshot) {
+            if (!snapshot.val()) {
+                // 初期チームデータ
+                const initialTeams = {
+                    team1: { name: "哲学ひつじ", id: "team1" },
+                    team2: { name: "ぶちまろ", id: "team2" },
+                    team3: { name: "チェス", id: "team3" },
+                    team4: { name: "ダリア", id: "team4" },
+                    team5: { name: "欧米か", id: "team5" }
+                };
+                
+                // データを設定
+                database.ref('teams').set(initialTeams)
+                    .then(() => console.log('初期データ設定完了'))
+                    .catch(error => console.error('初期データ設定エラー:', error));
+            }
+        });
     }
 });
 </script>
+
+<script src="js/main.js"></script>
 
 <script src="js/main.js"></script>
 </body>
