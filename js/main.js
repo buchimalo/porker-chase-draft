@@ -1,5 +1,5 @@
 // js/main.js
-const db = window.database;
+const db = firebase.database();
 
 // 巡目変更機能
 function changeRound(delta) {
@@ -9,14 +9,13 @@ function changeRound(delta) {
     if (newRound < 1) newRound = 1;
     if (newRound > 6) newRound = 6;
     
-    currentRoundSpan.textContent = newRound;
-    db.ref('currentRound').set(newRound);
+    db.ref('draft/currentRound').set(newRound);
 }
 
 // 現在の指名状況を監視
 function initializeMainScreen() {
     // チーム情報を取得
-    db.ref('teams').on('value', (snapshot) => {
+    db.ref('draft/teams').on('value', (snapshot) => {
         const teamsData = snapshot.val();
         if (teamsData) {
             // チェックボックスを更新
@@ -26,7 +25,7 @@ function initializeMainScreen() {
     });
 
     // 巡目の監視
-    db.ref('currentRound').on('value', (snapshot) => {
+    db.ref('draft/currentRound').on('value', (snapshot) => {
         const round = snapshot.val() || 1;
         document.getElementById('current-round').textContent = round;
     });
@@ -89,18 +88,16 @@ function updateHistory(teamsData) {
 
     Object.entries(teamsData).forEach(([teamId, team]) => {
         if (team.players) {
-            Object.entries(team.players)
-                .sort((a, b) => a[1].round - b[1].round) // 巡目順にソート
-                .forEach(([playerId, player]) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${player.round}巡目</td>
-                        <td>${team.name}</td>
-                        <td>${player.name}</td>
-                        <td>${player.status === 'lost_lottery' ? '抽選負け' : '完了'}</td>
-                    `;
-                    historyBody.appendChild(row);
-                });
+            Object.entries(team.players).forEach(([playerId, player]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${player.round || '-'}巡目</td>
+                    <td>${team.name}</td>
+                    <td>${player.name}</td>
+                    <td>完了</td>
+                `;
+                historyBody.appendChild(row);
+            });
         }
     });
 }
@@ -117,7 +114,7 @@ function setLostTeams() {
 
     const updates = {};
     lostTeams.forEach(teamId => {
-        updates[`teams/${teamId}/status`] = 'lost_lottery';
+        updates[`draft/teams/${teamId}/status`] = 'lost_lottery';
     });
 
     db.ref().update(updates)
@@ -131,43 +128,5 @@ function setLostTeams() {
         });
 }
 
-// ドラフトリセット機能
-function resetDraft() {
-    if (confirm('本当にドラフトをリセットしますか？\n全チームの指名選手が削除されます。\nこの操作は取り消せません。')) {
-        // まず、全チームのデータを取得
-        db.ref('teams').once('value')
-            .then((snapshot) => {
-                const teams = snapshot.val();
-                if (!teams) {
-                    throw new Error('チームデータが見つかりません');
-                }
-
-                // 各チームのplayersを削除するupdatesを作成
-                const updates = {};
-                Object.keys(teams).forEach(teamId => {
-                    updates[`teams/${teamId}/players`] = null;
-                    updates[`teams/${teamId}/status`] = null;
-                });
-
-                // 一括更新を実行
-                return db.ref().update(updates);
-            })
-            .then(() => {
-                console.log('リセット成功'); // デバッグ用
-                alert('ドラフトがリセットされました');
-                location.reload(); // ページを再読み込み
-            })
-            .catch((error) => {
-                console.error('リセットエラー:', error); // デバッグ用
-                alert('リセット中にエラーが発生しました: ' + error.message);
-            });
-    }
-}
-
 // 画面読み込み時に初期化
 document.addEventListener('DOMContentLoaded', initializeMainScreen);
-
-// デバッグ用：データ確認
-db.ref('teams').once('value', (snapshot) => {
-    console.log('現在のチームデータ:', snapshot.val());
-});
