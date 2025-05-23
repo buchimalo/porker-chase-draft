@@ -3,119 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ドラフト会議 指名シート</title>
+    <title>チームシート</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="container mt-4">
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-0">第<span id="current-round">1</span>巡目</h3>
-                        <h4 class="mb-0"><span id="team-name">チーム名</span> 指名シート</h4>
-                    </div>
-                    <button class="btn btn-light" onclick="showResults()">結果一覧を表示</button>
-                </div>
+        <h1 id="team-name" class="mb-4">チーム名</h1>
+        <p>現在の巡目: <span id="current-round">1</span></p>
+
+        <!-- 指名フォーム -->
+        <div class="card mb-4 nomination-form">
+            <div class="card-header">
+                選手指名
             </div>
             <div class="card-body">
-                <!-- 指名入力フォーム -->
-                <div class="nomination-form mb-4">
-                    <div class="mb-3">
-                        <label class="form-label">選手名</label>
-                        <input type="text" class="form-control" id="player-name" placeholder="選手名を入力">
-                    </div>
-                    <button class="btn btn-primary" onclick="submitNomination()">送信</button>
+                <div class="mb-3">
+                    <label for="player-name" class="form-label">選手名</label>
+                    <input type="text" class="form-control" id="player-name" placeholder="選手名を入力">
                 </div>
+                <button onclick="submitNomination()" class="btn btn-primary">指名する</button>
+            </div>
+        </div>
 
-                <!-- 確認モーダル -->
-                <div class="modal fade" id="confirmModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">指名確認</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p>以下の選手を指名します。よろしいですか？</p>
-                                <p class="fw-bold" id="confirmPlayerName"></p>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                                <button type="button" class="btn btn-primary" onclick="confirmNomination()">指名する</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 指名履歴 -->
-                <div class="mt-4">
-                    <h4>指名履歴</h4>
-                    <div id="team-history" class="list-group">
-                    </div>
+        <!-- 指名履歴 -->
+        <div class="card">
+            <div class="card-header">
+                指名履歴
+            </div>
+            <div class="card-body">
+                <div id="team-history" class="list-group">
+                    <!-- 履歴はJavaScriptで動的に生成 -->
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- 結果表示モーダル -->
-            <div class="modal fade" id="resultsModal" tabindex="-1">
-                <div class="modal-dialog modal-xl">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">ドラフト結果一覧</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row" id="results-container">
-                                <!-- 結果がここに表示される -->
-                            </div>
-                        </div>
-                    </div>
+    <!-- 確認モーダル -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">指名確認</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>以下の選手を指名します：</p>
+                    <p class="fw-bold" id="confirmPlayerName"></p>
+                    <p>よろしいですか？</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmNomination()">指名確定</button>
                 </div>
             </div>
-            
         </div>
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    
     <!-- Firebase SDKの読み込み -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<!-- Firebase Config -->
-<script>
-// 重複初期化を防ぐ
-if (typeof firebase === 'undefined' || !firebase.apps.length) {
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Firebase Config -->
+    <script>
     const firebaseConfig = {
-        apiKey: "AIzaSyCpbFz9odW0pjM67RBKi1g3K__-H5tAaqk",
-        authDomain: "porker-chase-draft.firebaseapp.com",
-        databaseURL: "https://porker-chase-draft-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "porker-chase-draft",
-        storageBucket: "porker-chase-draft.firebasestorage.app",
-        messagingSenderId: "1017710444956",
-        appId: "1:1017710444956:web:f9538ef485beb7b7074859",
-        measurementId: "G-HKFTDR6SK0"
+        apiKey: "AIzaSyBmBLBHx2gJdq-MpLxrpPDJVsDO5GP8YVM",
+        authDomain: "draft-test-bb0ed.firebaseapp.com",
+        databaseURL: "https://draft-test-bb0ed-default-rtdb.firebaseio.com",
+        projectId: "draft-test-bb0ed",
+        storageBucket: "draft-test-bb0ed.appspot.com",
+        messagingSenderId: "1060592987230",
+        appId: "1:1060592987230:web:16a9305992b820ced7c1a3"
     };
-
+    
     firebase.initializeApp(firebaseConfig);
-}
-
-const database = firebase.database();
-
-// データベース接続確認
-database.ref('.info/connected').on('value', function(snap) {
-    console.log('接続状態:', snap.val());
-    if (snap.val() === true) {
-        console.log('データベースに接続しました');
-    }
-});
-</script>
+    const database = firebase.database();
+    </script>
     
     <script src="js/team-sheet.js"></script>
 </body>
