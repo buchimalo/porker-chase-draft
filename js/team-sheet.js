@@ -1,5 +1,5 @@
 // js/team-sheet.js
-const db = firebase.database();
+const db = window.database;
 let currentTeamId = null;
 
 // チームIDをURLから取得
