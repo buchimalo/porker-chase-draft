@@ -100,22 +100,17 @@ const firebaseConfig = {
     measurementId: "G-HKFTDR6SK0"
 };
 
-// Firebase初期化
+// 初期化されていない場合のみ初期化
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
-const database = firebase.database();
 
-// データベース接続テスト
-database.ref('.info/connected').on('value', (snap) => {
-    console.log('接続状態:', snap.val());
-});
+// グローバル変数として定義
+window.database = firebase.database();
 </script>
 
+<!-- その後にJavaScriptファイルを読み込む -->
 <script src="js/main.js"></script>
 
-<script src="js/main.js"></script>
-
-<script src="js/main.js"></script>
 </body>
 </html>
