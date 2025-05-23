@@ -1,5 +1,5 @@
 // js/draft-results.js
-const db = firebase.database();
+const db = window.database;
 
 function initializeResults() {
     // チーム情報を取得
