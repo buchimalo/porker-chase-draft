@@ -1,79 +1,110 @@
-// js/draft-results.js
-const db = firebase.database();
+// js/draft-results.js — 結果一覧（リアルタイム更新）
+(function () {
+    'use strict';
 
-function initializeResults() {
-    // チーム情報とドラフトデータを取得
-    db.ref('draft/teams').on('value', (snapshot) => {
-        const teamsData = snapshot.val();
-        if (teamsData) {
-            // 指名データを取得して表示を更新
-            db.ref('draft/nominations').once('value', (nominationsSnapshot) => {
-                const nominationsData = nominationsSnapshot.val() || {};
-                updateResults(teamsData, nominationsData);
+    const D = window.Draft;
+    const db = D.db;
+
+    const state = {
+        teams: {},
+        nominations: {},
+        settings: { totalRounds: D.DEFAULT_ROUNDS, hidePicks: false, revealed: {} },
+        lottery: {}
+    };
+
+    let view = D.param('view2') === 'matrix' ? 'matrix' : 'grid';
+
+    function init() {
+        D.applyDisplayModes();
+
+        if (view === 'matrix') {
+            document.querySelectorAll('#view-toggle button').forEach(b => {
+                b.classList.toggle('active', b.dataset.view === 'matrix');
             });
         }
-    });
 
-    // 指名データの監視
-    db.ref('draft/nominations').on('value', (snapshot) => {
-        const nominationsData = snapshot.val();
-        db.ref('draft/teams').once('value', (teamsSnapshot) => {
-            const teamsData = teamsSnapshot.val();
-            if (teamsData) {
-                updateResults(teamsData, nominationsData);
-            }
+        document.getElementById('view-toggle').addEventListener('click', e => {
+            const btn = e.target.closest('button[data-view]');
+            if (!btn) return;
+            document.querySelectorAll('#view-toggle button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            view = btn.dataset.view;
+            render();
         });
-    });
-}
 
-function updateResults(teamsData, nominationsData) {
-    const container = document.getElementById('results-container');
-    container.innerHTML = '';
+        document.getElementById('btn-print').addEventListener('click', () => window.print());
 
-    // 各チームの結果を表示
-    Object.entries(teamsData).forEach(([teamId, team]) => {
-        const col = document.createElement('div');
-        col.className = `col-md team-color-${teamId.replace('team', '')}`;
-        
-        let nominations = [];
-        // 全ラウンドの指名を収集
-        if (nominationsData) {
-            for (let round = 1; round <= 6; round++) {
-                const roundData = nominationsData[`round${round}`];
-                if (roundData && roundData[teamId]) {
-                    nominations.push({
-                        round: round,
-                        player: roundData[teamId].playerName,
-                        status: roundData[teamId].status
-                    });
-                }
-            }
+        db.ref('draft').on('value', snapshot => {
+            const data = snapshot.val() || {};
+            state.teams = data.teams || {};
+            state.nominations = data.nominations || {};
+            state.settings = D.readSettings(data);
+            state.lottery = data.lottery || {};
+            render();
+        }, error => {
+            console.error('データ取得エラー:', error);
+            document.getElementById('results-container').innerHTML =
+                '<div class="empty-state"><div class="big">⚠</div>データを取得できませんでした</div>';
+        });
+    }
+
+    function render() {
+        const container = document.getElementById('results-container');
+        if (view === 'matrix') {
+            D.renderResultsMatrix(container, state.teams, state.nominations, state.settings.totalRounds);
+        } else {
+            D.renderResultsGrid(container, state.teams, state.nominations, state.settings.totalRounds);
+        }
+        renderSummary();
+        renderLotteryLog();
+    }
+
+    function renderSummary() {
+        const teams = D.teamList(state.teams);
+        let done = 0;
+        const total = teams.length * state.settings.totalRounds;
+
+        for (let r = 1; r <= state.settings.totalRounds; r++) {
+            const round = D.roundData(state.nominations, r);
+            teams.forEach(t => { if (D.isActive(round[t.id])) done++; });
         }
 
-        // チームの結果カードを作成
-        col.innerHTML = `
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4>${team.name}</h4>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        ${nominations.map(nom => `
-                            <li class="list-group-item">
-                                ${nom.round}巡目: 
-                                ${nom.status === 'lost_lottery' ? 
-                                    `<s>${nom.player}</s> <span class="badge bg-warning">抽選負け</span>` : 
-                                    nom.player}
-                            </li>
-                        `).join('')}
-                    </ul>
-                </div>
-            </div>
-        `;
+        document.getElementById('subtitle').textContent =
+            total ? done + ' / ' + total + ' 指名確定 — リアルタイム更新' : 'リアルタイム更新';
+    }
 
-        container.appendChild(col);
-    });
-}
+    function renderLotteryLog() {
+        const panel = document.getElementById('lottery-panel');
+        const box = document.getElementById('lottery-log');
+        const rows = [];
 
-// 画面読み込み時に初期化
-document.addEventListener('DOMContentLoaded', initializeResults);
+        Object.entries(state.lottery).forEach(([roundKey, records]) => {
+            if (!records) return;
+            const round = parseInt(String(roundKey).replace('round', ''), 10) || 0;
+            Object.values(records).forEach(rec => {
+                if (rec && rec.playerName) rows.push({ round, rec });
+            });
+        });
+
+        if (!rows.length) { panel.classList.add('hide'); return; }
+        panel.classList.remove('hide');
+        rows.sort((a, b) => a.round - b.round);
+
+        let body = '';
+        rows.forEach(({ round, rec }) => {
+            const losers = Array.isArray(rec.loserTeamNames) ? rec.loserTeamNames : [];
+            body += '<tr>' +
+                '<td class="round-cell">' + round + '巡目</td>' +
+                '<td class="player-cell">' + D.esc(rec.playerName) + '</td>' +
+                '<td><span class="tag tag-won">' + D.esc(rec.winnerTeamName || '') + '</span></td>' +
+                '<td class="muted">' + losers.map(n => D.esc(n)).join(' / ') + '</td>' +
+                '</tr>';
+        });
+
+        box.innerHTML = '<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+            '<th>巡目</th><th>対象選手</th><th>獲得</th><th>抽選負け</th>' +
+            '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+})();
