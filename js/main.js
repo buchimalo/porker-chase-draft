@@ -19,6 +19,7 @@
     let resultsView = 'grid';
     let lotteryCtx = null;  // { player, key, teamIds, winner }
     let teamDraft = null;   // チーム編集モーダルの作業用コピー
+    let playerDraft = [];   // 選手リスト編集モーダルの作業用コピー
 
     /* ---------- 初期化 ---------- */
 
@@ -54,6 +55,13 @@
         on('btn-add-team', addTeamRow);
         on('btn-save-teams', saveTeams);
         on('btn-copy-urls', copyAllTeamSheetUrls);
+        on('btn-add-player', addPlayer);
+        on('btn-toggle-bulk', toggleBulk);
+        on('btn-apply-bulk', applyBulk);
+
+        document.getElementById('player-add-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); addPlayer(); }
+        });
         on('btn-reveal', () => setRevealed(true));
         on('btn-unreveal', () => setRevealed(false));
         on('btn-save-rounds', saveTotalRounds);
@@ -602,17 +610,83 @@
     /* ---------- 選手リスト ---------- */
 
     function openPlayersModal() {
-        document.getElementById('players-textarea').value = state.players || '';
+        playerDraft = D.playerPool({ players: state.players });
+        document.getElementById('player-add-input').value = '';
+        document.getElementById('bulk-block').classList.add('hide');
+        renderPlayerEditor();
         new bootstrap.Modal(document.getElementById('playersModal')).show();
     }
 
+    function renderPlayerEditor() {
+        const box = document.getElementById('players-chips');
+        document.getElementById('players-count').textContent = playerDraft.length + '名';
+        box.innerHTML = '';
+
+        if (!playerDraft.length) {
+            box.innerHTML = '<p class="pool-empty">選手が登録されていません。上の入力欄から追加してください。</p>';
+            return;
+        }
+
+        playerDraft.forEach((name, index) => {
+            const chip = document.createElement('span');
+            chip.className = 'pool-chip player-chip';
+            chip.innerHTML = D.esc(name) +
+                '<button type="button" class="chip-remove" title="削除">✕</button>';
+            chip.querySelector('.chip-remove').addEventListener('click', () => {
+                playerDraft.splice(index, 1);
+                renderPlayerEditor();
+            });
+            box.appendChild(chip);
+        });
+    }
+
+    function addPlayer() {
+        const input = document.getElementById('player-add-input');
+        const name = input.value.trim();
+        if (!name) return;
+
+        if (playerDraft.some(p => D.normalizeName(p) === D.normalizeName(name))) {
+            D.toast('「' + name + '」はすでに登録されています', 'danger');
+            return;
+        }
+
+        playerDraft.push(name);
+        input.value = '';
+        input.focus();
+        renderPlayerEditor();
+    }
+
+    function toggleBulk() {
+        const block = document.getElementById('bulk-block');
+        const show = block.classList.contains('hide');
+        block.classList.toggle('hide', !show);
+        if (show) document.getElementById('players-textarea').value = playerDraft.join('\n');
+    }
+
+    function applyBulk() {
+        const names = document.getElementById('players-textarea').value
+            .split('\n').map(s => s.trim()).filter(Boolean);
+
+        const seen = new Set();
+        playerDraft = names.filter(name => {
+            const key = D.normalizeName(name);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        const dropped = names.length - playerDraft.length;
+        D.toast('リストに反映しました（' + playerDraft.length + '名' +
+            (dropped ? ' / 重複' + dropped + '件を除外' : '') + '）', 'success');
+        renderPlayerEditor();
+    }
+
     function savePlayers() {
-        const value = document.getElementById('players-textarea').value
-            .split('\n').map(s => s.trim()).filter(Boolean).join('\n');
+        const value = playerDraft.join('\n');
 
         db.ref('draft/players').set(value)
             .then(() => {
-                D.toast('選手リストを保存しました（' + (value ? value.split('\n').length : 0) + '名）', 'success');
+                D.toast('選手リストを保存しました（' + playerDraft.length + '名）', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('playersModal')).hide();
             })
             .catch(err => D.toast('エラー: ' + err.message, 'danger'));
