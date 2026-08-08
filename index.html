@@ -213,8 +213,26 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="panel-note mb-2">1行に1名ずつ入力してください。</p>
-                    <textarea class="textarea" id="players-textarea" placeholder="ちゃんかね&#10;ドナルド&#10;たぬぴょん"></textarea>
+                    <div class="player-add">
+                        <input type="text" class="input" id="player-add-input" placeholder="選手名を入力して追加"
+                            autocomplete="off">
+                        <button class="btn2 btn2-gold" id="btn-add-player">＋ 追加</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mt-3 mb-2">
+                        <span class="field-label" style="margin:0" id="players-count">0名</span>
+                        <div class="spacer"></div>
+                        <button class="btn2 btn2-sm" id="btn-toggle-bulk">まとめて貼り付け</button>
+                    </div>
+
+                    <div class="pool" id="players-chips" style="max-height:320px"></div>
+
+                    <div class="field hide" id="bulk-block" style="margin:0">
+                        <span class="field-label">1行に1名ずつ（貼り付け後「リストに反映」を押してください）</span>
+                        <textarea class="textarea" id="players-textarea"
+                            placeholder="ちゃんかね&#10;ドナルド&#10;たぬぴょん"></textarea>
+                        <button class="btn2 btn2-sm mt-2" id="btn-apply-bulk">リストに反映</button>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
