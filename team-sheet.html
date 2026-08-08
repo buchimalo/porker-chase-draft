@@ -1,106 +1,143 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ドラフト会議 指名シート</title>
-    <!-- Bootstrap CSS -->
+    <meta name="theme-color" content="#0b241a">
+    <title>ポカチェ ドラフト会議 | 指名シート</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✍️</text></svg>">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 </head>
+
 <body>
-    <div class="container mt-4">
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-0">第<span id="current-round">1</span>巡目</h3>
-                        <h4 class="mb-0"><span id="team-name">チーム名</span> 指名シート</h4>
-                    </div>
-                    <button class="btn btn-light" onclick="showResults()">結果<br>一覧</button>
-                </div>
-            </div>
-            <div class="card-body">
-                <!-- 指名入力フォーム -->
-                <div class="nomination-form mb-4">
-                    <div class="mb-3">
-                        <label class="form-label">選手名</label>
-                        <input type="text" class="form-control" id="player-name" placeholder="選手名を入力">
-                    </div>
-                    <button class="btn btn-primary" onclick="submitNomination()">送信</button>
-                </div>
+    <div class="app" style="max-width:720px">
 
-                <!-- 確認モーダル -->
-                <div class="modal fade" id="confirmModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">指名確認</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p>以下の選手を指名します。よろしいですか？</p>
-                                <p class="fw-bold" id="confirmPlayerName"></p>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                                <button type="button" class="btn btn-primary" onclick="confirmNomination()">指名する</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 指名履歴 -->
-                <div class="mt-4">
-                    <h4>指名履歴</h4>
-                    <div id="team-history" class="list-group">
-                    </div>
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark" id="team-mark">✍️</div>
+                <div class="brand-text">
+                    <h1 class="brand-title" id="team-name">チーム選択</h1>
+                    <p class="brand-sub">指名シート</p>
                 </div>
             </div>
 
-            <!-- 結果表示モーダル -->
-            <div class="modal fade" id="resultsModal" tabindex="-1">
-                <div class="modal-dialog modal-xl">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">ドラフト結果一覧</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row" id="results-container">
-                                <!-- 結果がここに表示される -->
-                            </div>
-                        </div>
-                    </div>
+            <div class="round-badge">
+                <span class="unit">第</span>
+                <span class="num" id="current-round">1</span>
+                <span class="unit">巡目</span>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="btn2 btn2-gold" id="btn-show-results">結果一覧</button>
+                <button class="btn2" id="btn-switch-team" title="チームを変更">切替</button>
+            </div>
+        </header>
+
+        <!-- チーム選択 -->
+        <section class="panel hide" id="team-picker">
+            <div class="panel-head">
+                <h2 class="panel-title">あなたのチームを選択</h2>
+            </div>
+            <div class="panel-body">
+                <div class="check-grid" id="team-choices"></div>
+                <p class="panel-note">選択したチームはこの端末に記憶されます。</p>
+            </div>
+        </section>
+
+        <!-- 本体 -->
+        <div id="sheet-main" class="hide">
+
+            <div class="sheet-status" id="sheet-status">
+                <span class="sheet-status-icon" id="status-icon">⏳</span>
+                <div class="sheet-status-text">
+                    <strong id="status-title">読み込み中…</strong>
+                    <span id="status-detail"></span>
                 </div>
             </div>
-            
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2 class="panel-title">✍️ 指名する</h2>
+                    <div class="spacer"></div>
+                    <span class="panel-note" id="pool-count"></span>
+                </div>
+                <div class="panel-body">
+                    <div class="field">
+                        <label class="field-label" for="player-name">選手名</label>
+                        <input type="text" class="input input-lg" id="player-name" placeholder="選手名を入力 / 下から選択"
+                            autocomplete="off">
+                    </div>
+
+                    <div class="field" id="pool-block">
+                        <label class="field-label" for="pool-search">候補選手から選ぶ</label>
+                        <input type="text" class="input pool-search" id="pool-search" placeholder="🔍 選手名で絞り込み"
+                            autocomplete="off">
+                        <div class="pool" id="player-pool"></div>
+                    </div>
+
+                    <div id="warning-box"></div>
+
+                    <button class="btn2 btn2-gold btn2-lg btn2-block" id="btn-submit">この選手を指名する</button>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2 class="panel-title">📋 自チームの指名履歴</h2>
+                </div>
+                <div class="panel-body">
+                    <ul class="team-picks" id="team-history"></ul>
+                </div>
+            </section>
+
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- 指名確認モーダル -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">指名の確認</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="muted mb-2">第<span id="confirm-round"></span>巡目の指名として送信します。</p>
+                    <p style="font-size:1.6rem;font-weight:800;margin:0 0 10px" id="confirmPlayerName"></p>
+                    <div id="confirm-warnings"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn2 btn2-gold" id="btn-confirm">指名を確定する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 結果一覧モーダル -->
+    <div class="modal fade" id="resultsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🏆 ドラフト結果一覧</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="results-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Firebase Config -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCpbFz9odW0pjM67RBKi1g3K__-H5tAaqk",
-            authDomain: "porker-chase-draft.firebaseapp.com",
-            databaseURL: "https://porker-chase-draft-default-rtdb.asia-southeast1.firebasedatabase.app/",
-            projectId: "porker-chase-draft",
-            storageBucket: "porker-chase-draft.firebasestorage.app",
-            messagingSenderId: "1017710444956",
-            appId: "1:1017710444956:web:f9538ef485beb7b7074859",
-            measurementId: "G-HKFTDR6SK0"
-        };
-        firebase.initializeApp(firebaseConfig);
-    </script>
-    
+    <script src="js/core.js"></script>
     <script src="js/team-sheet.js"></script>
 </body>
+
 </html>
-
-
