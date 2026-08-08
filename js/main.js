@@ -53,6 +53,7 @@
         on('btn-edit-teams', openTeamsModal);
         on('btn-add-team', addTeamRow);
         on('btn-save-teams', saveTeams);
+        on('btn-copy-urls', copyAllTeamSheetUrls);
         on('btn-reveal', () => setRevealed(true));
         on('btn-unreveal', () => setRevealed(false));
         on('btn-save-rounds', saveTotalRounds);
@@ -448,6 +449,7 @@
 
         if (!teamDraft.length) {
             box.innerHTML = '<p class="muted">監督が登録されていません。「＋ 監督を追加」から追加してください。</p>';
+            renderTeamUrls();
             return;
         }
 
@@ -469,12 +471,49 @@
 
             row.querySelector('input').addEventListener('input', e => { team.name = e.target.value; });
 
+            row.querySelector('input').addEventListener('input', renderTeamUrls);
+
             row.querySelectorAll('button[data-act]').forEach(btn => {
                 btn.addEventListener('click', () => handleTeamRowAction(btn.dataset.act, index));
             });
 
             box.appendChild(row);
         });
+
+        renderTeamUrls();
+    }
+
+    function teamSheetUrl(teamId) {
+        const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+        return base + 'team-sheet.html?team=' + encodeURIComponent(teamId);
+    }
+
+    function teamUrlsText() {
+        return (teamDraft || [])
+            .map(team => (team.name.trim() || '（名前未設定）') + '\n' + teamSheetUrl(team.id))
+            .join('\n\n');
+    }
+
+    function renderTeamUrls() {
+        const box = document.getElementById('team-urls');
+        if (box) box.value = teamUrlsText();
+    }
+
+    function copyAllTeamSheetUrls() {
+        const text = teamUrlsText();
+        if (!text) {
+            D.toast('監督が登録されていません', 'danger');
+            return;
+        }
+
+        const box = document.getElementById('team-urls');
+        const done = () => D.toast('URL一覧をコピーしました', 'success');
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => { box.select(); });
+        } else {
+            box.select();
+        }
     }
 
     function handleTeamRowAction(action, index) {
@@ -510,9 +549,7 @@
     }
 
     function copyTeamSheetUrl(team) {
-        const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-        const url = base + 'team-sheet.html?team=' + encodeURIComponent(team.id);
-
+        const url = teamSheetUrl(team.id);
         const done = () => D.toast((team.name || team.id) + ' のURLをコピーしました', 'success');
         const fail = () => window.prompt('コピーできませんでした。以下のURLを使ってください', url);
 
