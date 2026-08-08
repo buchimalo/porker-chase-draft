@@ -947,6 +947,51 @@ table.matrix td.empty {
     padding: 10px 0;
 }
 
+/* 選手リスト編集 */
+.player-add {
+    display: flex;
+    gap: 8px;
+}
+
+.player-add .input {
+    flex: 1;
+}
+
+.pool-chip.player-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 6px;
+    cursor: default;
+}
+
+.pool-chip.player-chip:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-strong);
+    color: var(--text);
+    transform: none;
+}
+
+.chip-remove {
+    appearance: none;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.72rem;
+    line-height: 1;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.16s, color 0.16s;
+}
+
+.chip-remove:hover {
+    background: var(--red);
+    color: #fff;
+}
+
 /* ============================================================
    結果一覧
    ============================================================ */
