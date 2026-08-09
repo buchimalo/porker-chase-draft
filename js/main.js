@@ -62,6 +62,12 @@
         document.getElementById('player-add-input').addEventListener('keydown', e => {
             if (e.key === 'Enter') { e.preventDefault(); addPlayer(); }
         });
+
+        // 貼り付け・入力と同時にチップ一覧と人数へ反映する
+        document.getElementById('players-textarea').addEventListener('input', () => {
+            syncFromBulk();
+            renderPlayerEditor();
+        });
         on('btn-reveal', () => setRevealed(true));
         on('btn-unreveal', () => setRevealed(false));
         on('btn-save-rounds', saveTotalRounds);
@@ -656,14 +662,22 @@
         renderPlayerEditor();
     }
 
+    function bulkVisible() {
+        return !document.getElementById('bulk-block').classList.contains('hide');
+    }
+
     function toggleBulk() {
         const block = document.getElementById('bulk-block');
         const show = block.classList.contains('hide');
         block.classList.toggle('hide', !show);
-        if (show) document.getElementById('players-textarea').value = playerDraft.join('\n');
+        if (show) {
+            document.getElementById('players-textarea').value = playerDraft.join('\n');
+            document.getElementById('players-textarea').focus();
+        }
     }
 
-    function applyBulk() {
+    // テキスト欄の内容を playerDraft に取り込む（重複は除外）
+    function syncFromBulk() {
         const names = document.getElementById('players-textarea').value
             .split('\n').map(s => s.trim()).filter(Boolean);
 
@@ -675,13 +689,21 @@
             return true;
         });
 
-        const dropped = names.length - playerDraft.length;
+        return names.length - playerDraft.length;
+    }
+
+    function applyBulk() {
+        const dropped = syncFromBulk();
+        renderPlayerEditor();
+        document.getElementById('bulk-block').classList.add('hide');
         D.toast('リストに反映しました（' + playerDraft.length + '名' +
             (dropped ? ' / 重複' + dropped + '件を除外' : '') + '）', 'success');
-        renderPlayerEditor();
     }
 
     function savePlayers() {
+        // 貼り付け欄が開いたままでも、その内容を取りこぼさない
+        if (bulkVisible()) syncFromBulk();
+
         const value = playerDraft.join('\n');
 
         db.ref('draft/players').set(value)
