@@ -953,6 +953,8 @@
             winRow.querySelector('.sd-hand').textContent = '';
             await wait(280);
 
+            const slamGap = Math.max(80, 240 - winHand.finisher.cards.length * 12);
+            if (!winHand.finisher.cards.length) await wait(500);
             for (let i = 0; i < winHand.finisher.cards.length; i++) {
                 const el = document.createElement('span');
                 el.innerHTML = Showdown.cardHtml(winHand.finisher.cards[i]);
@@ -960,7 +962,7 @@
                 cardEl.classList.add('is-slammed');
                 holder.appendChild(cardEl);
                 Showdown.sfx.slam(i);
-                await wait(230);
+                await wait(slamGap);
             }
 
             winRow.querySelector('.sd-hand').textContent = winHand.finisher.label;
