@@ -1,276 +1,276 @@
-<!DOCTYPE html>
-<html lang="ja">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0b241a">
-    <title>ポカチェ ドラフト会議 | メインボード</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-</head>
-
-<body>
-    <div class="app">
-
-        <!-- ヘッダー -->
-        <header class="topbar">
-            <div class="brand">
-                <div class="brand-mark">PC</div>
-                <div class="brand-text">
-                    <h1 class="brand-title">ポカチェ ドラフト会議</h1>
-                    <p class="brand-sub">メインボード</p>
-                </div>
-            </div>
-
-            <div class="round-badge">
-                <span class="unit">第</span>
-                <span class="num" id="current-round">1</span>
-                <span class="unit">巡目</span>
-            </div>
-
-            <div class="topbar-actions no-obs">
-                <button class="btn2 admin-only" id="btn-prev-round">← 前の巡</button>
-                <button class="btn2 admin-only" id="btn-next-round">次の巡 →</button>
-                <button class="btn2" id="btn-show-player-list">選手一覧</button>
-                <button class="btn2 btn2-gold" id="btn-show-results">結果一覧</button>
-                <button class="btn2 admin-only" id="btn-toggle-admin" title="管理パネル">設定</button>
-            </div>
-        </header>
-
-        <!-- 指名ボード -->
-        <section class="panel">
-            <div class="progress-row">
-                <span class="progress-label" id="progress-label">0 / 0 チーム指名済み</span>
-                <div class="progress-track">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
-                <span class="progress-label" id="reveal-state"></span>
-            </div>
-            <div class="board" id="nominations-list"></div>
-            <div id="conflict-alert"></div>
-        </section>
-
-        <!-- 管理パネル -->
-        <section class="panel admin-only no-obs hide" id="admin-panel">
-            <div class="panel-head">
-                <h2 class="panel-title">管理パネル</h2>
-                <div class="spacer"></div>
-                <button class="btn2 btn2-sm" id="btn-close-admin">閉じる</button>
-            </div>
-            <div class="panel-body">
-
-                <div class="field">
-                    <span class="field-label">抽選 — 負けたチームを選択（手動）</span>
-                    <div class="check-grid" id="lost-teams-checkboxes"></div>
-                    <button class="btn2" id="btn-set-lost">選択したチームを抽選負けにする</button>
-                    <p class="panel-note mt-2">重複が発生している場合は、ボード下部の「抽選する」ボタンで自動抽選も可能です。</p>
-                </div>
-
-                <hr style="border-color:var(--border)">
-
-                <div class="field">
-                    <span class="field-label">指名の取り消し</span>
-                    <div class="check-grid" id="undo-buttons"></div>
-                    <p class="panel-note">現在の巡の指名を削除します（誤入力の修正用）。</p>
-                </div>
-
-                <hr style="border-color:var(--border)">
-
-                <div class="field">
-                    <span class="field-label">進行設定</span>
-                    <label class="check" style="max-width:420px;margin-bottom:8px">
-                        <input type="checkbox" id="chk-hide-picks">
-                        <span>指名を伏せる（全チーム送信まで非公開 → 一斉公開）</span>
-                    </label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-                        <button class="btn2 btn2-gold" id="btn-reveal">この巡を一斉公開</button>
-                        <button class="btn2 btn2-sm" id="btn-unreveal">公開を取り消す</button>
-                        <span style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--text-muted)">
-                            総巡目数
-                            <input type="number" class="input" id="input-total-rounds" min="1" max="12"
-                                style="width:78px;padding:6px 9px;font-size:.9rem">
-                        </span>
-                        <button class="btn2 btn2-sm" id="btn-save-rounds">保存</button>
-                    </div>
-                </div>
-
-                <hr style="border-color:var(--border)">
-
-                <div class="field" style="margin-bottom:0">
-                    <span class="field-label">名簿・リセット</span>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <button class="btn2" id="btn-edit-teams">監督（チーム）を編集</button>
-                        <button class="btn2" id="btn-edit-players">選手リストを編集</button>
-                        <button class="btn2 btn2-danger" id="btn-reset">ドラフトをリセット</button>
-                    </div>
-                    <p class="panel-note mt-2">選手リストを登録すると、各チームの指名シートで一覧から選べるようになります。</p>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- 指名履歴 -->
-        <section class="panel no-obs">
-            <div class="panel-head">
-                <h2 class="panel-title">指名履歴</h2>
-                <div class="spacer"></div>
-                <div class="seg" id="history-view-toggle">
-                    <button data-view="list" class="active">リスト</button>
-                    <button data-view="matrix">一覧表</button>
-                </div>
-            </div>
-            <div class="panel-body" id="history-container"></div>
-        </section>
-
-    </div>
-
-    <!-- 結果一覧モーダル -->
-    <div class="modal fade" id="resultsModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">ドラフト結果一覧</h5>
-                    <div class="seg ms-3" id="results-view-toggle">
-                        <button data-view="grid" class="active">カード</button>
-                        <button data-view="matrix">一覧表</button>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="results-container"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 抽選モーダル -->
-    <div class="modal fade" id="lotteryModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">抽選 — ポーカー勝負</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="lottery-stage">
-                        <div class="lottery-target">指名重複：<strong id="lottery-player"></strong></div>
-                        <div class="showdown" id="showdown"></div>
-                        <div class="showdown-banner" id="showdown-banner"></div>
-                        <p class="lottery-result-note" id="lottery-note">カードで決着をつけます</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn2 btn2-gold btn2-lg" id="btn-spin">勝負！</button>
-                    <button type="button" class="btn2" id="btn-apply-lottery" disabled>結果を確定する</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 監督（チーム）編集モーダル -->
-    <div class="modal fade" id="teamsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">監督（チーム）の管理</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="panel-note mb-3">
-                        上から順に「指名順」になります（偶数巡は自動で逆順）。
-                        リンクボタンで各監督に渡す指名シートのURLをコピーできます。
-                    </p>
-                    <div id="team-editor"></div>
-                    <button class="btn2 mt-3" id="btn-add-team">＋ 監督を追加</button>
-
-                    <div class="field" style="margin:22px 0 0">
-                        <span class="field-label">指名シートのURL一覧（各監督に配布）</span>
-                        <textarea class="textarea" id="team-urls" readonly
-                            style="min-height:110px;font-size:.78rem;line-height:1.9"></textarea>
-                        <button class="btn2 btn2-sm mt-2" id="btn-copy-urls">一覧をまとめてコピー</button>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
-                    <button type="button" class="btn2 btn2-gold" id="btn-save-teams">保存</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 選手一覧モーダル -->
-    <div class="modal fade" id="playerListModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">選手一覧</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                        <span class="field-label" style="margin:0" id="player-list-count"></span>
-                        <div class="spacer"></div>
-                        <div class="seg" id="player-list-filter">
-                            <button data-view="all" class="active">すべて</button>
-                            <button data-view="free">未指名のみ</button>
-                        </div>
-                    </div>
-                    <input type="text" class="input mb-3" id="player-list-search" placeholder="選手名で絞り込み"
-                        autocomplete="off">
-                    <div class="player-list" id="player-list"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 選手リスト編集モーダル -->
-    <div class="modal fade" id="playersModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">候補選手リスト</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="player-add">
-                        <input type="text" class="input" id="player-add-input" placeholder="選手名を入力して追加"
-                            autocomplete="off">
-                        <button class="btn2 btn2-gold" id="btn-add-player">＋ 追加</button>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2 mt-3 mb-2">
-                        <span class="field-label" style="margin:0" id="players-count">0名</span>
-                        <div class="spacer"></div>
-                        <button class="btn2 btn2-sm" id="btn-toggle-bulk">まとめて貼り付け</button>
-                    </div>
-
-                    <div class="pool" id="players-chips" style="max-height:320px"></div>
-
-                    <div class="field hide" id="bulk-block" style="margin:0">
-                        <span class="field-label">1行に1名ずつ（貼り付けると上のリストへ自動で反映されます）</span>
-                        <textarea class="textarea" id="players-textarea"
-                            placeholder="ちゃんかね&#10;ドナルド&#10;たぬぴょん"></textarea>
-                        <button class="btn2 btn2-sm mt-2" id="btn-apply-bulk">この欄を閉じる</button>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
-                    <button type="button" class="btn2 btn2-gold" id="btn-save-players">保存</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/core.js"></script>
-    <script src="js/showdown.js"></script>
-    <script src="js/main.js"></script>
-</body>
-
-</html>
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b241a">
+    <title>ポカチェ ドラフト会議 | メインボード</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- ヘッダー -->
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark">PC</div>
+                <div class="brand-text">
+                    <h1 class="brand-title">ポカチェ ドラフト会議</h1>
+                    <p class="brand-sub">メインボード</p>
+                </div>
+            </div>
+
+            <div class="round-badge">
+                <span class="unit">第</span>
+                <span class="num" id="current-round">1</span>
+                <span class="unit">巡目</span>
+            </div>
+
+            <div class="topbar-actions no-obs">
+                <button class="btn2 admin-only" id="btn-prev-round">← 前の巡</button>
+                <button class="btn2 admin-only" id="btn-next-round">次の巡 →</button>
+                <button class="btn2" id="btn-show-player-list">選手一覧</button>
+                <button class="btn2 btn2-gold" id="btn-show-results">結果一覧</button>
+                <button class="btn2 admin-only" id="btn-toggle-admin" title="管理パネル">設定</button>
+            </div>
+        </header>
+
+        <!-- 指名ボード -->
+        <section class="panel">
+            <div class="progress-row">
+                <span class="progress-label" id="progress-label">0 / 0 チーム指名済み</span>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span class="progress-label" id="reveal-state"></span>
+            </div>
+            <div class="board" id="nominations-list"></div>
+            <div id="conflict-alert"></div>
+        </section>
+
+        <!-- 管理パネル -->
+        <section class="panel admin-only no-obs hide" id="admin-panel">
+            <div class="panel-head">
+                <h2 class="panel-title">管理パネル</h2>
+                <div class="spacer"></div>
+                <button class="btn2 btn2-sm" id="btn-close-admin">閉じる</button>
+            </div>
+            <div class="panel-body">
+
+                <div class="field">
+                    <span class="field-label">抽選 — 負けたチームを選択（手動）</span>
+                    <div class="check-grid" id="lost-teams-checkboxes"></div>
+                    <button class="btn2" id="btn-set-lost">選択したチームを抽選負けにする</button>
+                    <p class="panel-note mt-2">重複が発生している場合は、ボード下部の「抽選する」ボタンで自動抽選も可能です。</p>
+                </div>
+
+                <hr style="border-color:var(--border)">
+
+                <div class="field">
+                    <span class="field-label">指名の取り消し</span>
+                    <div class="check-grid" id="undo-buttons"></div>
+                    <p class="panel-note">現在の巡の指名を削除します（誤入力の修正用）。</p>
+                </div>
+
+                <hr style="border-color:var(--border)">
+
+                <div class="field">
+                    <span class="field-label">進行設定</span>
+                    <label class="check" style="max-width:420px;margin-bottom:8px">
+                        <input type="checkbox" id="chk-hide-picks">
+                        <span>指名を伏せる（全チーム送信まで非公開 → 一斉公開）</span>
+                    </label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                        <button class="btn2 btn2-gold" id="btn-reveal">この巡を一斉公開</button>
+                        <button class="btn2 btn2-sm" id="btn-unreveal">公開を取り消す</button>
+                        <span style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--text-muted)">
+                            総巡目数
+                            <input type="number" class="input" id="input-total-rounds" min="1" max="12"
+                                style="width:78px;padding:6px 9px;font-size:.9rem">
+                        </span>
+                        <button class="btn2 btn2-sm" id="btn-save-rounds">保存</button>
+                    </div>
+                </div>
+
+                <hr style="border-color:var(--border)">
+
+                <div class="field" style="margin-bottom:0">
+                    <span class="field-label">名簿・リセット</span>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn2" id="btn-edit-teams">監督（チーム）を編集</button>
+                        <button class="btn2" id="btn-edit-players">選手リストを編集</button>
+                        <button class="btn2 btn2-danger" id="btn-reset">ドラフトをリセット</button>
+                    </div>
+                    <p class="panel-note mt-2">選手リストを登録すると、各チームの指名シートで一覧から選べるようになります。</p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 指名履歴 -->
+        <section class="panel no-obs">
+            <div class="panel-head">
+                <h2 class="panel-title">指名履歴</h2>
+                <div class="spacer"></div>
+                <div class="seg" id="history-view-toggle">
+                    <button data-view="list" class="active">リスト</button>
+                    <button data-view="matrix">一覧表</button>
+                </div>
+            </div>
+            <div class="panel-body" id="history-container"></div>
+        </section>
+
+    </div>
+
+    <!-- 結果一覧モーダル -->
+    <div class="modal fade" id="resultsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">ドラフト結果一覧</h5>
+                    <div class="seg ms-3" id="results-view-toggle">
+                        <button data-view="grid" class="active">カード</button>
+                        <button data-view="matrix">一覧表</button>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="results-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 抽選モーダル -->
+    <div class="modal fade" id="lotteryModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">抽選 — ポーカー勝負</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="lottery-stage">
+                        <div class="lottery-target">指名重複：<strong id="lottery-player"></strong></div>
+                        <div class="showdown" id="showdown"></div>
+                        <div class="showdown-banner" id="showdown-banner"></div>
+                        <p class="lottery-result-note" id="lottery-note">カードで決着をつけます</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn2 btn2-gold btn2-lg" id="btn-spin">勝負！</button>
+                    <button type="button" class="btn2" id="btn-apply-lottery" disabled>結果を確定する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 監督（チーム）編集モーダル -->
+    <div class="modal fade" id="teamsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">監督（チーム）の管理</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="panel-note mb-3">
+                        上から順に「指名順」になります（偶数巡は自動で逆順）。
+                        リンクボタンで各監督に渡す指名シートのURLをコピーできます。
+                    </p>
+                    <div id="team-editor"></div>
+                    <button class="btn2 mt-3" id="btn-add-team">＋ 監督を追加</button>
+
+                    <div class="field" style="margin:22px 0 0">
+                        <span class="field-label">指名シートのURL一覧（各監督に配布）</span>
+                        <textarea class="textarea" id="team-urls" readonly
+                            style="min-height:110px;font-size:.78rem;line-height:1.9"></textarea>
+                        <button class="btn2 btn2-sm mt-2" id="btn-copy-urls">一覧をまとめてコピー</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn2 btn2-gold" id="btn-save-teams">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 選手一覧モーダル -->
+    <div class="modal fade" id="playerListModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">選手一覧</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                        <span class="field-label" style="margin:0" id="player-list-count"></span>
+                        <div class="spacer"></div>
+                        <div class="seg" id="player-list-filter">
+                            <button data-view="all" class="active">すべて</button>
+                            <button data-view="free">未指名のみ</button>
+                        </div>
+                    </div>
+                    <input type="text" class="input mb-3" id="player-list-search" placeholder="選手名で絞り込み"
+                        autocomplete="off">
+                    <div class="player-list" id="player-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 選手リスト編集モーダル -->
+    <div class="modal fade" id="playersModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">候補選手リスト</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="player-add">
+                        <input type="text" class="input" id="player-add-input" placeholder="選手名を入力して追加"
+                            autocomplete="off">
+                        <button class="btn2 btn2-gold" id="btn-add-player">＋ 追加</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mt-3 mb-2">
+                        <span class="field-label" style="margin:0" id="players-count">0名</span>
+                        <div class="spacer"></div>
+                        <button class="btn2 btn2-sm" id="btn-toggle-bulk">まとめて貼り付け</button>
+                    </div>
+
+                    <div class="pool" id="players-chips" style="max-height:320px"></div>
+
+                    <div class="field hide" id="bulk-block" style="margin:0">
+                        <span class="field-label">1行に1名ずつ（貼り付けると上のリストへ自動で反映されます）</span>
+                        <textarea class="textarea" id="players-textarea"
+                            placeholder="ちゃんかね&#10;ドナルド&#10;たぬぴょん"></textarea>
+                        <button class="btn2 btn2-sm mt-2" id="btn-apply-bulk">この欄を閉じる</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn2 btn2-gold" id="btn-save-players">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/showdown.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
