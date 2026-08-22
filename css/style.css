@@ -2100,3 +2100,17 @@ table.tbl .team-cell {
         order: 1;
     }
 }
+
+/* ヘッダーのロゴ */
+.brand-logo {
+    height: 42px;
+    width: auto;
+    flex: 0 0 auto;
+    display: block;
+}
+
+@media (max-width: 720px) {
+    .brand-logo {
+        height: 30px;
+    }
+}
