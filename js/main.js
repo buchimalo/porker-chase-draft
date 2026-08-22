@@ -886,14 +886,35 @@
                 h => packet.provisional && h.team.id === packet.provisional.id);
             const provRow = provIndex >= 0 ? rows[provIndex] : null;
 
-            // いったん仮の勝者で決着させる
-            rows.forEach(r => r.classList.remove('is-leading'));
-            if (provRow) provRow.classList.add('is-winner');
-            banner.className = 'showdown-banner is-win';
-            banner.textContent = '🏆 ' + (packet.provisional ? packet.provisional.name : '') + ' の勝ち';
-            note.textContent = '…で、決まりかと思われた';
-            Showdown.sfx.win();
-            await wait(2000);
+            // 本物の決着とまったく同じ見た目で祝う（ここで待ったを匂わせない）
+            const provHand = packet.hands[provIndex];
+            const provLead = Showdown.leadersAt(packet.hands, 4).some(
+                t => packet.provisional && t.id === packet.provisional.id);
+
+            rows.forEach(r => r.classList.remove('is-leading'));
+            rows.forEach((r, i) => {
+                if (i === provIndex) r.classList.add('is-winner');
+                else r.classList.add('is-out');
+            });
+
+            stage.classList.add('is-flash');
+            setTimeout(() => stage.classList.remove('is-flash'), 500);
+
+            if (provLead) {
+                banner.className = 'showdown-banner is-win';
+                banner.textContent = '🏆 ' + packet.provisional.name + ' 逃げ切り！';
+                Showdown.sfx.win();
+            } else {
+                banner.className = 'showdown-banner is-comeback';
+                banner.textContent = '⚡ 大逆転！！ ' + packet.provisional.name + '！';
+                Showdown.sfx.comeback();
+            }
+
+            const provFlavor = Showdown.flavorFor(provHand.result);
+            note.textContent = provHand.result.name + ' で ' + packet.provisional.name + ' が交渉権を獲得' +
+                (provFlavor ? '  —  ' + provFlavor : '');
+            Showdown.confetti(stage, 2400);
+            await wait(2600);
 
             // 待った
             stage.classList.add('is-objection');
@@ -901,7 +922,7 @@
             banner.textContent = '✋ ちょっとまったー！！';
             note.textContent = '';
             Showdown.sfx.objection();
-            if (provRow) provRow.classList.remove('is-winner');
+            rows.forEach(r => { r.classList.remove('is-winner'); r.classList.remove('is-out'); });
             await wait(1500);
 
             const winIndex = packet.hands.findIndex(h => h.team.id === packet.winner.id);
@@ -910,7 +931,6 @@
 
             winRow.classList.add('is-objector');
             banner.textContent = '✋ ちょっとまったー！！　' + packet.winner.name;
-            note.textContent = 'まだ終わっていないらしい';
             await wait(1200);
 
             // 出していた札を引っ込めて、別の札を叩きつける
