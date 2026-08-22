@@ -199,6 +199,11 @@
             } else if (D.isLost(nom)) {
                 playerHtml = '<s>' + D.esc(nom.playerName) + '</s>';
                 tags.push('<span class="tag tag-lost">抽選負け・再指名待ち</span>');
+            } else if (D.isTentative(nom)) {
+                // 仮出し。まだ確定していないので抽選や進行の判定には入れない
+                playerHtml = D.esc(nom.playerName);
+                playerClass += ' is-tentative';
+                tags.push('<span class="tag tag-tentative">仮</span>');
             } else {
                 playerHtml = D.esc(nom.playerName);
                 if (conflictTeams.has(team.id)) {
@@ -338,13 +343,13 @@
                     rows.push({ round: r, team, player: att.playerName, status: 'lost_lottery' });
                 });
 
-                const pending = nom.status !== 'lost_lottery' &&
+                const pending = nom.status !== 'lost_lottery' && !D.isTentative(nom) &&
                     contested.has(D.normalizeName(nom.playerName));
                 rows.push({
                     round: r,
                     team,
                     player: nom.playerName,
-                    status: pending ? 'contested' : nom.status
+                    status: D.isTentative(nom) ? 'tentative' : (pending ? 'contested' : nom.status)
                 });
             });
         }
@@ -358,14 +363,16 @@
         rows.forEach(row => {
             const lost = row.status === 'lost_lottery';
             const contested = row.status === 'contested';
+            const tentative = row.status === 'tentative';
             body += '<tr>' +
                 '<td class="round-cell">' + row.round + '巡目</td>' +
                 '<td class="team-cell"><span class="pick-dot" style="--team-color:' + row.team.color +
                 ';display:inline-block;margin-right:7px"></span>' + D.esc(row.team.name) + '</td>' +
                 '<td class="player-cell">' + (lost ? '<s>' + D.esc(row.player) + '</s>' : D.esc(row.player)) + '</td>' +
                 '<td>' + (lost ? '<span class="tag tag-lost">抽選負け</span>'
-                    : contested ? '<span class="tag tag-conflict">重複 — 抽選待ち</span>'
-                        : '<span class="tag tag-won">確定</span>') + '</td>' +
+                    : tentative ? '<span class="tag tag-tentative">仮</span>'
+                        : contested ? '<span class="tag tag-conflict">重複 — 抽選待ち</span>'
+                            : '<span class="tag tag-won">確定</span>') + '</td>' +
                 '</tr>';
         });
 

@@ -2005,3 +2005,42 @@ table.tbl .team-cell {
         grid-template-columns: 1fr;
     }
 }
+
+/* 仮出し */
+.tag-tentative {
+    background: rgba(255, 164, 43, .22);
+    color: #ffc16b;
+}
+
+.pick-player.is-tentative {
+    color: #ffc16b;
+}
+
+.sheet-status.state-tentative {
+    background: rgba(255, 164, 43, .16);
+}
+
+.sheet-status.state-tentative .sheet-status-icon {
+    color: var(--amber);
+}
+
+.sheet-status.state-locked {
+    background: rgba(30, 215, 96, .16);
+}
+
+.sheet-status.state-locked .sheet-status-icon {
+    color: var(--accent);
+}
+
+/* 指名シートの操作ボタン */
+.submit-row {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 8px;
+}
+
+@media (max-width: 520px) {
+    .submit-row {
+        grid-template-columns: 1fr;
+    }
+}

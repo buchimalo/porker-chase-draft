@@ -83,7 +83,14 @@
 
                     <div id="warning-box"></div>
 
-                    <button class="btn2 btn2-gold btn2-lg btn2-block" id="btn-submit">この選手を指名する</button>
+                    <div class="submit-row">
+                        <button class="btn2 btn2-lg" id="btn-tentative">仮で出す</button>
+                        <button class="btn2 btn2-gold btn2-lg" id="btn-submit">確定して送信</button>
+                    </div>
+                    <p class="panel-note mt-2" id="submit-note">
+                        「仮で出す」は盤面に表示されますが、何度でも変更できます。
+                        「確定して送信」を押すと変更できなくなります。
+                    </p>
                 </div>
             </section>
 
@@ -108,13 +115,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="muted mb-2">第<span id="confirm-round"></span>巡目の指名として送信します。</p>
+                    <p class="muted mb-2">第<span id="confirm-round"></span>巡目の指名として<strong>確定</strong>します。</p>
                     <p style="font-size:1.6rem;font-weight:800;margin:0 0 10px" id="confirmPlayerName"></p>
                     <div id="confirm-warnings"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
-                    <button type="button" class="btn2 btn2-gold" id="btn-confirm">指名を確定する</button>
+                    <button type="button" class="btn2 btn2-gold" id="btn-confirm">確定する（変更不可）</button>
                 </div>
             </div>
         </div>

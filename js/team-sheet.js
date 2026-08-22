@@ -16,6 +16,7 @@
     };
 
     let poolFilter = '';
+    let pendingConfirmName = '';
     let lastRound = null;
 
     /* ---------- 初期化 ---------- */
@@ -45,6 +46,7 @@
 
     function bindEvents() {
         document.getElementById('btn-submit').addEventListener('click', submitNomination);
+        document.getElementById('btn-tentative').addEventListener('click', submitTentative);
         document.getElementById('btn-confirm').addEventListener('click', confirmNomination);
         document.getElementById('btn-show-results').addEventListener('click', showResults);
         document.getElementById('btn-switch-team').addEventListener('click', () => {
@@ -141,30 +143,51 @@
         const title = document.getElementById('status-title');
         const detail = document.getElementById('status-detail');
         const submitBtn = document.getElementById('btn-submit');
+        const tentBtn = document.getElementById('btn-tentative');
+        const note = document.getElementById('submit-note');
 
         const nom = myNomination();
         box.className = 'sheet-status';
+        submitBtn.disabled = false;
+        tentBtn.disabled = false;
+        tentBtn.classList.remove('hide');
 
         if (nom && D.isLost(nom)) {
             box.classList.add('state-redo');
             icon.textContent = '!';
             title.textContent = '抽選負け — 再指名してください';
             detail.textContent = '「' + nom.playerName + '」は他チームが獲得しました。別の選手を指名してください。';
-            submitBtn.textContent = '再指名する';
-        } else if (nom && nom.playerName) {
-            box.classList.add('state-done');
+            submitBtn.textContent = '確定して送信';
+            note.textContent = '「仮で出す」で様子を見てから確定できます。';
+
+        } else if (nom && D.isActive(nom)) {
+            // 確定済み。もう変更できない
+            box.classList.add('state-locked');
             icon.textContent = '✓';
-            title.textContent = '指名済み：' + nom.playerName;
-            detail.textContent = '結果を待っています。送信し直すと指名を変更できます。';
-            submitBtn.textContent = '指名を変更する';
+            title.textContent = '確定：' + nom.playerName;
+            detail.textContent = 'この巡の指名は確定しました。変更はできません。';
+            submitBtn.disabled = true;
+            tentBtn.disabled = true;
+            submitBtn.textContent = '確定済み';
+            note.textContent = '訂正が必要な場合は進行役に「指名の取り消し」を依頼してください。';
+
+        } else if (nom && D.isTentative(nom)) {
+            box.classList.add('state-tentative');
+            icon.textContent = '·';
+            title.textContent = '仮出し中：' + nom.playerName;
+            detail.textContent = '盤面に表示されています。まだ確定していないので何度でも変更できます。';
+            submitBtn.textContent = 'この内容で確定する';
+            note.textContent = '別の選手に差し替える場合は、選び直してもう一度「仮で出す」を押してください。';
+
         } else {
             box.classList.add('state-waiting');
             icon.textContent = '·';
-            title.textContent = '第' + state.currentRound + '巡目の指名を送信してください';
+            title.textContent = '第' + state.currentRound + '巡目の指名';
             const order = D.orderedTeams(D.teamList(state.teams), state.currentRound);
             const index = order.findIndex(t => t.id === state.teamId);
             detail.textContent = index >= 0 ? 'この巡のあなたの指名順は ' + (index + 1) + ' 番手です' : '';
-            submitBtn.textContent = 'この選手を指名する';
+            submitBtn.textContent = '確定して送信';
+            note.textContent = '「仮で出す」は盤面に表示されますが、何度でも変更できます。「確定して送信」を押すと変更できなくなります。';
         }
     }
 
@@ -315,26 +338,8 @@
 
     /* ---------- 送信 ---------- */
 
-    function submitNomination() {
-        const name = document.getElementById('player-name').value.trim();
-
-        if (!name) {
-            D.toast('選手名を入力してください', 'danger');
-            return;
-        }
-
-        const warnings = collectWarnings(name);
-        document.getElementById('confirm-round').textContent = state.currentRound;
-        document.getElementById('confirmPlayerName').textContent = name;
-        document.getElementById('confirm-warnings').innerHTML = warningHtml(warnings);
-
-        new bootstrap.Modal(document.getElementById('confirmModal')).show();
-    }
-
-    function confirmNomination() {
-        const name = document.getElementById('player-name').value.trim();
-        if (!name) return;
-
+    // 指名を書き込む。tentative なら仮出し、そうでなければ確定
+    function writeNomination(name, tentative) {
         const round = state.currentRound;
         const team = state.teams[state.teamId];
         const teamName = (team && team.name) || state.teamId;
@@ -354,14 +359,72 @@
             playerName: name,
             teamName: teamName,
             timestamp: Date.now(),
-            status: 'confirmed'
+            status: tentative ? 'tentative' : 'confirmed'
         };
         if (attempts.length) payload.attempts = attempts;
+
+        return db.ref('draft/nominations/round' + round + '/' + state.teamId).set(payload);
+    }
+
+    // 仮で出す（確認なし。何度でも差し替えられる）
+    function submitTentative() {
+        const name = document.getElementById('player-name').value.trim();
+        if (!name) {
+            D.toast('選手名を入力してください', 'danger');
+            return;
+        }
+        if (D.isActive(myNomination())) {
+            D.toast('確定済みのため変更できません', 'danger');
+            return;
+        }
+
+        const btn = document.getElementById('btn-tentative');
+        btn.disabled = true;
+        writeNomination(name, true)
+            .then(() => {
+                document.getElementById('player-name').value = '';
+                poolFilter = '';
+                document.getElementById('pool-search').value = '';
+                renderPool();
+                renderWarnings();
+                D.toast('「' + name + '」を仮で出しました', 'info');
+            })
+            .catch(err => D.toast('エラー: ' + err.message, 'danger', 6000))
+            .then(() => { btn.disabled = false; });
+    }
+
+    // 確定の確認モーダルを出す
+    function submitNomination() {
+        const input = document.getElementById('player-name').value.trim();
+        const current = myNomination();
+        // 入力が空でも、仮出し中ならそれを確定できる
+        const name = input || (D.isTentative(current) ? current.playerName : '');
+
+        if (!name) {
+            D.toast('選手名を入力してください', 'danger');
+            return;
+        }
+        if (D.isActive(current)) {
+            D.toast('確定済みのため変更できません', 'danger');
+            return;
+        }
+
+        pendingConfirmName = name;
+        document.getElementById('confirm-round').textContent = state.currentRound;
+        document.getElementById('confirmPlayerName').textContent = name;
+        document.getElementById('confirm-warnings').innerHTML = warningHtml(collectWarnings(name));
+
+        new bootstrap.Modal(document.getElementById('confirmModal')).show();
+    }
+
+    function confirmNomination() {
+        const name = pendingConfirmName;
+        if (!name) return;
 
         const btn = document.getElementById('btn-confirm');
         btn.disabled = true;
 
-        db.ref('draft/nominations/round' + round + '/' + state.teamId).set(payload)
+        writeNomination(name, false)
             .then(() => {
                 document.getElementById('player-name').value = '';
                 poolFilter = '';
@@ -370,7 +433,8 @@
                 renderWarnings();
                 const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
                 if (modal) modal.hide();
-                D.toast('「' + name + '」を指名しました', 'success');
+                D.toast('「' + name + '」で確定しました', 'success');
+                pendingConfirmName = '';
             })
             .catch(err => D.toast('エラー: ' + err.message, 'danger', 6000))
             .then(() => { btn.disabled = false; });

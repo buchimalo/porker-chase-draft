@@ -243,8 +243,18 @@
         return !!nomination && nomination.status === 'lost_lottery';
     }
 
-    // 有効な（抽選負けでない）指名だけを対象にする
+    // 仮出し（まだ確定していない）
+    function isTentative(nomination) {
+        return !!nomination && nomination.status === 'tentative';
+    }
+
+    // 確定済みの指名だけを対象にする（抽選・進行判定・再指名チェックはこれを使う）
     function isActive(nomination) {
+        return !!nomination && !!nomination.playerName && !isLost(nomination) && !isTentative(nomination);
+    }
+
+    // 盤面に出ている指名（仮出しを含む。抽選負けは除く）
+    function hasPick(nomination) {
         return !!nomination && !!nomination.playerName && !isLost(nomination);
     }
 
@@ -360,12 +370,14 @@
                 const nom = roundData(nominationsData, r)[team.id];
                 if (nom && nom.playerName) {
                     const lost = isLost(nom);
-                    if (!lost) done++;
-                    items += '<li>' +
+                    const tent = isTentative(nom);
+                    if (!lost && !tent) done++;
+                    items += '<li' + (tent ? ' class="pending"' : '') + '>' +
                         '<span class="rd">' + r + '巡</span>' +
                         '<span class="nm">' +
                         (lost ? '<s>' + esc(nom.playerName) + '</s> <span class="tag tag-lost">抽選負け</span>'
-                            : esc(nom.playerName)) +
+                            : tent ? esc(nom.playerName) + ' <span class="tag tag-tentative">仮</span>'
+                                : esc(nom.playerName)) +
                         '</span></li>';
                 } else {
                     items += '<li class="pending">' +
@@ -408,7 +420,9 @@
                 if (nom && nom.playerName) {
                     body += isLost(nom)
                         ? '<td><s>' + esc(nom.playerName) + '</s></td>'
-                        : '<td>' + esc(nom.playerName) + '</td>';
+                        : isTentative(nom)
+                            ? '<td class="empty">' + esc(nom.playerName) + '（仮）</td>'
+                            : '<td>' + esc(nom.playerName) + '</td>';
                 } else {
                     body += '<td class="empty">—</td>';
                 }
@@ -432,7 +446,9 @@
         orderedTeams,
         roundData,
         isLost,
+        isTentative,
         isActive,
+        hasPick,
         findConflicts,
         takenPlayers,
         readSettings,
