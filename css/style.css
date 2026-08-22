@@ -1898,3 +1898,48 @@ table.tbl tbody tr:hover td {
 .progress-fill {
     background: var(--accent);
 }
+
+/* 監督名は誰の指名かを示す主要な情報なので大きく出す */
+.pick-team {
+    margin-bottom: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--paper);
+    letter-spacing: -0.01em;
+}
+
+.pick-dot {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+}
+
+.pick-order {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ash);
+}
+
+/* 勝負の行と結果カードの監督名も揃える */
+.sd-team {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--paper);
+}
+
+.team-card-head {
+    font-size: 16px;
+}
+
+table.tbl .team-cell {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--paper);
+}
+
+@media (max-width: 720px) {
+    .pick-team {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+}
