@@ -221,7 +221,7 @@
 
             card.innerHTML =
                 '<div class="pick-team">' +
-                '<span class="pick-dot"></span>' +
+                D.avatarHtml(team) +
                 '<span>' + D.esc(team.name) + '</span>' +
                 '<span class="pick-order">' + (index + 1) + '番手</span>' +
                 '</div>' +
@@ -366,8 +366,7 @@
             const tentative = row.status === 'tentative';
             body += '<tr>' +
                 '<td class="round-cell">' + row.round + '巡目</td>' +
-                '<td class="team-cell"><span class="pick-dot" style="--team-color:' + row.team.color +
-                ';display:inline-block;margin-right:7px"></span>' + D.esc(row.team.name) + '</td>' +
+                '<td class="team-cell">' + D.avatarHtml(row.team, 'is-inline') + D.esc(row.team.name) + '</td>' +
                 '<td class="player-cell">' + (lost ? '<s>' + D.esc(row.player) + '</s>' : D.esc(row.player)) + '</td>' +
                 '<td>' + (lost ? '<span class="tag tag-lost">抽選負け</span>'
                     : tentative ? '<span class="tag tag-tentative">仮</span>'
@@ -564,7 +563,7 @@
     /* ---------- 監督（チーム）の管理 ---------- */
 
     function openTeamsModal() {
-        teamDraft = currentTeams().map(team => ({ id: team.id, name: team.name }));
+        teamDraft = currentTeams().map(team => ({ id: team.id, name: team.name, icon: team.icon || '', color: team.color }));
         renderTeamEditor();
         new bootstrap.Modal(document.getElementById('teamsModal')).show();
     }
@@ -582,7 +581,8 @@
 
     function addTeamRow() {
         if (!teamDraft) return;
-        teamDraft.push({ id: nextTeamId(), name: '' });
+        const id = nextTeamId();
+        teamDraft.push({ id: id, name: '', icon: '', color: D.teamColor(id) });
         renderTeamEditor();
         const inputs = document.querySelectorAll('#team-editor .team-row input');
         if (inputs.length) inputs[inputs.length - 1].focus();
@@ -606,17 +606,24 @@
 
             row.innerHTML =
                 '<span class="team-row-order">' + (index + 1) + '</span>' +
-                '<span class="pick-dot"></span>' +
+                D.avatarHtml(team) +
                 '<input type="text" class="input" value="' + D.esc(team.name) + '" placeholder="監督名 / チーム名" maxlength="30">' +
+                '<input type="text" class="input team-icon" value="' + D.esc(team.icon || '') + '" placeholder="アイコン（画像パス / @X名）" maxlength="200">' +
                 '<span class="team-row-meta">' + (picks ? picks + '指名' : '未指名') + '</span>' +
                 '<button type="button" class="btn2 btn2-sm" data-act="up" title="上へ"' + (index === 0 ? ' disabled' : '') + '>↑</button>' +
                 '<button type="button" class="btn2 btn2-sm" data-act="down" title="下へ"' + (index === teamDraft.length - 1 ? ' disabled' : '') + '>↓</button>' +
                 '<button type="button" class="btn2 btn2-sm" data-act="link" title="指名シートのURLをコピー">URL</button>' +
                 '<button type="button" class="btn2 btn2-sm btn2-danger" data-act="remove" title="削除">✕</button>';
 
-            row.querySelector('input').addEventListener('input', e => { team.name = e.target.value; });
+            const inputs = row.querySelectorAll('input');
+            inputs[0].addEventListener('input', e => { team.name = e.target.value; });
+            inputs[1].addEventListener('input', e => {
+                team.icon = e.target.value;
+                const mark = row.querySelector('.team-avatar, .pick-dot');
+                if (mark) mark.outerHTML = D.avatarHtml(team);
+            });
 
-            row.querySelector('input').addEventListener('input', renderTeamUrls);
+            inputs[0].addEventListener('input', renderTeamUrls);
 
             row.querySelectorAll('button[data-act]').forEach(btn => {
                 btn.addEventListener('click', () => handleTeamRowAction(btn.dataset.act, index));
@@ -725,7 +732,10 @@
 
         const teamsObj = {};
         teamDraft.forEach((team, index) => {
-            teamsObj[team.id] = { id: team.id, name: names[index], order: index + 1 };
+            const entry = { id: team.id, name: names[index], order: index + 1 };
+            const icon = (team.icon || '').trim();
+            if (icon) entry.icon = icon;
+            teamsObj[team.id] = entry;
         });
 
         const updates = { 'draft/teams': teamsObj };
@@ -912,7 +922,7 @@
             row.dataset.teamId = hand.team.id;
             row.style.setProperty('--team-color', D.teamColor(hand.team.id));
             row.innerHTML =
-                '<div class="sd-team"><span class="pick-dot"></span>' + D.esc(hand.team.name) + '</div>' +
+                '<div class="sd-team">' + D.avatarHtml(hand.team) + D.esc(hand.team.name) + '</div>' +
                 '<div class="sd-cards">' + hand.cards.map(() => '<span class="pcard is-back"></span>').join('') + '</div>' +
                 '<div class="sd-hand"></div>';
             board.appendChild(row);

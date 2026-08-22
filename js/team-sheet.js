@@ -91,7 +91,12 @@
 
         const team = state.teams[state.teamId];
         document.getElementById('team-name').textContent = (team && team.name) || state.teamId;
-        document.getElementById('team-mark').style.background = D.teamColor(state.teamId);
+        const mark = document.getElementById('team-mark');
+        const icon = D.iconUrl(team && team.icon);
+        mark.style.background = D.teamColor(state.teamId);
+        mark.style.backgroundImage = icon ? 'url("' + icon + '")' : '';
+        mark.style.backgroundSize = 'cover';
+        mark.style.backgroundPosition = 'center';
         document.getElementById('current-round').textContent = state.currentRound;
 
         // 巡目が変わったら入力欄をリセット
@@ -123,7 +128,7 @@
             const btn = document.createElement('button');
             btn.className = 'btn2';
             btn.style.borderColor = team.color;
-            btn.innerHTML = '<span class="pick-dot" style="--team-color:' + team.color + '"></span>' + D.esc(team.name);
+            btn.innerHTML = D.avatarHtml(team) + D.esc(team.name);
             btn.addEventListener('click', () => {
                 state.teamId = team.id;
                 safeStorageSet(STORAGE_KEY, team.id);

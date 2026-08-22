@@ -2044,3 +2044,59 @@ table.tbl .team-cell {
         grid-template-columns: 1fr;
     }
 }
+
+/* 監督アイコン */
+.team-avatar {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--raised);
+}
+
+.team-avatar.is-inline {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    margin-right: 8px;
+    vertical-align: -5px;
+}
+
+.sd-team .team-avatar {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+}
+
+.team-card-head .team-avatar {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+}
+
+.team-row .team-avatar {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+}
+
+.btn2 .team-avatar {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+}
+
+/* 監督編集：アイコン欄は名前より狭く */
+.team-row .team-icon {
+    flex: 0 1 190px;
+    min-width: 120px;
+    font-size: 12px;
+}
+
+@media (max-width: 720px) {
+    .team-row .team-icon {
+        flex: 1 1 100%;
+        order: 1;
+    }
+}

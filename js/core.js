@@ -218,6 +218,7 @@
                 id,
                 name: (team && team.name) || id,
                 order: (team && typeof team.order === 'number') ? team.order : null,
+                icon: (team && team.icon) || '',
                 color: teamColor(id)
             }))
             .sort((a, b) => {
@@ -324,6 +325,50 @@
             .filter(Boolean);
     }
 
+    /* ---------- 監督アイコン ---------- */
+
+    /**
+     * 入力を画像URLに変換する。
+     *  - 画像URLならそのまま
+     *  - X のプロフィールURL / @ハンドル は unavatar.io 経由で解決する
+     *    （X は画像URLの直接取得を遮断しているため）
+     */
+    function iconUrl(raw) {
+        const value = String(raw || '').trim();
+        if (!value) return '';
+
+        const xMatch = value.match(/(?:x\.com|twitter\.com)\/@?([A-Za-z0-9_]{1,15})/i);
+        let handle = xMatch ? xMatch[1] : '';
+
+        if (!handle) {
+            // 画像URL・リポジトリ内の相対パスはそのまま使う
+            if (/^https?:\/\//i.test(value)) return value;
+            if (/[\/.]/.test(value)) return value;
+            // @ハンドル もしくは ハンドルのみ
+            const bare = value.replace(/^@/, '');
+            if (/^[A-Za-z0-9_]{1,15}$/.test(bare)) handle = bare;
+        }
+
+        if (!handle) return '';
+        return 'https://unavatar.io/x/' + encodeURIComponent(handle);
+    }
+
+    /**
+     * チームの識別マーク。アイコンがあれば画像、無ければ従来の色ドット。
+     * 画像の読み込みに失敗してもチームカラーの丸が残る。
+     */
+    function avatarHtml(team, extraClass) {
+        const cls = extraClass ? ' ' + extraClass : '';
+        const url = iconUrl(team && team.icon);
+        if (!url) {
+            return '<span class="pick-dot' + cls + '" style="--team-color:' +
+                (team && team.color ? team.color : 'currentColor') + '"></span>';
+        }
+        return '<img class="team-avatar' + cls + '" src="' + esc(url) +
+            '" alt="" loading="lazy" style="background:' +
+            (team && team.color ? team.color : 'transparent') + '">';
+    }
+
     /* ---------- トースト ---------- */
 
     let toastStack = null;
@@ -388,6 +433,7 @@
 
             card.innerHTML =
                 '<div class="team-card-head">' +
+                avatarHtml(team) +
                 esc(team.name) +
                 '<span class="team-card-count">' + done + '/' + totalRounds + '</span>' +
                 '</div>' +
@@ -442,6 +488,8 @@
         esc,
         normalizeName,
         teamColor,
+        iconUrl,
+        avatarHtml,
         teamList,
         orderedTeams,
         roundData,
