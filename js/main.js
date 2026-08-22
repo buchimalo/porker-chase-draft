@@ -72,6 +72,7 @@
         on('btn-reveal', () => setRevealed(true));
         on('btn-unreveal', () => setRevealed(false));
         on('btn-save-rounds', saveTotalRounds);
+        on('btn-force-next', forceNextRound);
         on('btn-spin', spinLottery);
         on('btn-apply-lottery', applyLottery);
 
@@ -125,6 +126,7 @@
         renderHistory();
         renderAdminControls();
         syncSettingsInputs();
+        syncAdvanceButton();
         // 選手一覧を開いたままでも最新状態に追従させる
         const plModal = document.getElementById('playerListModal');
         if (plModal && plModal.classList.contains('show')) renderPlayerList();
@@ -411,13 +413,76 @@
 
     /* ---------- 操作 ---------- */
 
-    function changeRound(delta) {
+    // この巡が完了しているか（未指名なし・抽選待ちなし）
+    function roundBlockers() {
+        const teams = currentTeams();
+        const round = D.roundData(state.nominations, state.currentRound);
+        return {
+            pending: teams.filter(t => !D.isActive(round[t.id])),
+            conflicts: D.findConflicts(state.nominations, state.currentRound)
+        };
+    }
+
+    function blockerText() {
+        const b = roundBlockers();
+        const parts = [];
+        if (b.pending.length) {
+            parts.push('未指名 ' + b.pending.length + 'チーム（' +
+                b.pending.map(t => t.name).join('・') + '）');
+        }
+        if (b.conflicts.length) {
+            parts.push('抽選待ち ' + b.conflicts.length + '件（' +
+                b.conflicts.map(c => c.name).join('・') + '）');
+        }
+        return parts.join(' / ');
+    }
+
+    // 次の巡へ進める状態か
+    function canAdvance() {
+        const b = roundBlockers();
+        return !b.pending.length && !b.conflicts.length;
+    }
+
+    // 次へボタンの状態を更新する
+    function syncAdvanceButton() {
+        const btn = document.getElementById('btn-next-round');
+        if (!btn) return;
+
+        const last = state.currentRound >= state.settings.totalRounds;
+        const reason = blockerText();
+        const blocked = last || !canAdvance();
+
+        btn.disabled = blocked;
+        btn.title = last ? '最終巡です'
+            : reason ? 'この巡が完了していません — ' + reason
+                : '';
+
+        const force = document.getElementById('btn-force-next');
+        if (force) {
+            force.disabled = last;
+            force.textContent = reason ? '未完了のまま次の巡へ（' + reason + '）' : '次の巡へ';
+        }
+    }
+
+    function changeRound(delta, force) {
+        // 前へ戻るのは常に自由。次へ進むときだけ完了を要求する
+        if (delta > 0 && !force && !canAdvance()) {
+            D.toast('この巡が完了していません — ' + blockerText(), 'danger', 5000);
+            return;
+        }
+
         let next = state.currentRound + delta;
         if (next < 1) next = 1;
         if (next > state.settings.totalRounds) next = state.settings.totalRounds;
         if (next === state.currentRound) return;
         db.ref('draft/currentRound').set(next)
             .catch(err => D.toast('巡目を変更できませんでした: ' + err.message, 'danger'));
+    }
+
+    function forceNextRound() {
+        const reason = blockerText();
+        if (reason && !confirm('この巡は完了していません。\n' + reason + '\n\nそれでも次の巡へ進みますか？')) return;
+        changeRound(1, true);
     }
 
     function toggleAdmin(force) {
