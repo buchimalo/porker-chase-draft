@@ -334,7 +334,7 @@ h5 {
 
 .board {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     /* 余りマスに線が出ないよう、枠線はカード側に持たせて端を切り落とす */
     margin: 0 -1px -1px 0;
     background: var(--carbon);
@@ -1941,5 +1941,67 @@ table.tbl .team-cell {
     .pick-team {
         font-size: 14px;
         margin-bottom: 10px;
+    }
+}
+
+/* 余ったマスに入れる進捗サマリー */
+.pick-summary {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    min-height: 132px;
+    padding: 16px 18px;
+    background: var(--carbon);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.ps-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--fog);
+}
+
+.ps-row .ps-label {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--ash);
+}
+
+.ps-row .ps-value {
+    margin-left: auto;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--paper);
+    font-variant-numeric: tabular-nums;
+}
+
+.ps-row .ps-value.is-alert {
+    color: var(--red);
+}
+
+.ps-row .ps-value.is-accent {
+    color: var(--accent);
+}
+
+/* 2列以下では余りマスの結合をやめる */
+@media (max-width: 900px) {
+    .board {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pick-summary {
+        grid-column: auto !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .board {
+        grid-template-columns: 1fr;
     }
 }

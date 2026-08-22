@@ -224,6 +224,40 @@
             board.appendChild(card);
         });
 
+        // 3列で余ったマスに進捗サマリーを入れる
+        const cols = 3;
+        const spare = (cols - (ordered.length % cols)) % cols;
+        if (spare > 0) {
+            const pool = D.playerPool({ players: state.players });
+            const taken = D.takenPlayers(state.nominations, state.settings.totalRounds);
+            const freeCount = pool.filter(p => !taken.has(D.normalizeName(p))).length;
+
+            const summary = document.createElement('div');
+            summary.className = 'pick-summary';
+            summary.style.gridColumn = 'span ' + spare;
+
+            let html =
+                '<div class="ps-row"><span class="ps-label">ROUND</span>' +
+                '<span class="ps-value">' + state.currentRound + ' / ' + state.settings.totalRounds + '</span></div>' +
+                '<div class="ps-row"><span class="ps-label">この巡の指名</span>' +
+                '<span class="ps-value">' + submitted + ' / ' + ordered.length + '</span></div>';
+
+            if (pool.length) {
+                html += '<div class="ps-row"><span class="ps-label">残り選手</span>' +
+                    '<span class="ps-value">' + freeCount + ' / ' + pool.length + '</span></div>';
+            }
+            if (conflicts.length) {
+                html += '<div class="ps-row"><span class="ps-label">抽選待ち</span>' +
+                    '<span class="ps-value is-alert">' + conflicts.length + '</span></div>';
+            } else if (submitted >= ordered.length && ordered.length) {
+                html += '<div class="ps-row"><span class="ps-label">状態</span>' +
+                    '<span class="ps-value is-accent">全員完了</span></div>';
+            }
+
+            summary.innerHTML = html;
+            board.appendChild(summary);
+        }
+
         updateProgress(submitted, ordered.length);
         renderRevealState(submitted, ordered.length);
     }
