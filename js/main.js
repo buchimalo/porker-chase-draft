@@ -730,52 +730,126 @@
         };
 
         document.getElementById('lottery-player').textContent = target.name;
-        document.getElementById('lottery-name').textContent = 'READY';
+        document.getElementById('showdown').innerHTML = '';
+        document.getElementById('showdown-banner').className = 'showdown-banner';
+        document.getElementById('showdown-banner').textContent = '';
         document.getElementById('lottery-note').textContent =
-            lotteryCtx.teams.map(t => t.name).join(' / ') + ' の ' + lotteryCtx.teams.length + 'チームで抽選';
-        document.getElementById('lottery-reel').className = 'lottery-reel';
+            lotteryCtx.teams.map(t => t.name).join(' / ') + ' の ' + lotteryCtx.teams.length + 'チームでポーカー勝負';
         document.getElementById('btn-spin').disabled = false;
         document.getElementById('btn-apply-lottery').disabled = true;
 
         new bootstrap.Modal(document.getElementById('lotteryModal')).show();
     }
 
+    /* ---------- ポーカー勝負の演出 ---------- */
+
     function spinLottery() {
         if (!lotteryCtx) return;
 
-        const reel = document.getElementById('lottery-reel');
-        const nameEl = document.getElementById('lottery-name');
+        const board = document.getElementById('showdown');
+        const banner = document.getElementById('showdown-banner');
+        const note = document.getElementById('lottery-note');
         const spinBtn = document.getElementById('btn-spin');
-        const names = lotteryCtx.teams.map(t => t.name);
+        const applyBtn = document.getElementById('btn-apply-lottery');
 
         spinBtn.disabled = true;
-        reel.className = 'lottery-reel spinning';
-        document.getElementById('lottery-note').textContent = '抽選中…';
+        applyBtn.disabled = true;
+        banner.className = 'showdown-banner';
+        banner.textContent = '';
 
-        const winnerIndex = Math.floor(Math.random() * lotteryCtx.teams.length);
-        lotteryCtx.winner = lotteryCtx.teams[winnerIndex];
+        const packet = Showdown.deal(lotteryCtx.teams, { dramaChance: 0.35 });
+        lotteryCtx.winner = packet.winner;
+        lotteryCtx.packet = packet;
 
-        let tick = 0;
-        let delay = 55;
-        const total = 26 + Math.floor(Math.random() * 8);
+        // 各チームの行を伏せた状態で並べる
+        board.innerHTML = '';
+        packet.hands.forEach(hand => {
+            const row = document.createElement('div');
+            row.className = 'sd-row';
+            row.dataset.teamId = hand.team.id;
+            row.style.setProperty('--team-color', D.teamColor(hand.team.id));
+            row.innerHTML =
+                '<div class="sd-team"><span class="pick-dot"></span>' + D.esc(hand.team.name) + '</div>' +
+                '<div class="sd-cards">' +
+                hand.cards.map(() => '<span class="pcard is-back"></span>').join('') +
+                '</div>' +
+                '<div class="sd-hand"></div>';
+            board.appendChild(row);
+        });
 
-        (function step() {
-            nameEl.textContent = names[tick % names.length];
-            tick++;
-            if (tick < total) {
-                // 終盤は減速させる
-                if (tick > total - 8) delay += 45;
-                setTimeout(step, delay);
-            } else {
-                reel.className = 'lottery-reel won';
-                nameEl.textContent = lotteryCtx.winner.name;
-                document.getElementById('lottery-note').textContent =
-                    '🎉 ' + lotteryCtx.winner.name + ' が交渉権を獲得しました';
-                document.getElementById('btn-apply-lottery').disabled = false;
-                spinBtn.disabled = false;
-                spinBtn.textContent = 'もう一度回す';
+        note.textContent = 'カードを配りました…';
+
+        const rows = Array.from(board.querySelectorAll('.sd-row'));
+        let step = 0;
+
+        function revealStep() {
+            // 全チームの step 枚目を同時にめくる
+            packet.hands.forEach((hand, i) => {
+                const slot = rows[i].querySelectorAll('.pcard')[step];
+                slot.outerHTML = Showdown.cardHtml(hand.cards[step]);
+            });
+            step++;
+
+            const shown = step;
+            const leaders = Showdown.leadersAt(packet.hands, shown);
+            const leaderIds = leaders.map(t => t.id);
+
+            packet.hands.forEach((hand, i) => {
+                const row = rows[i];
+                row.classList.toggle('is-leading', shown < 5 && leaderIds.indexOf(hand.team.id) !== -1);
+                const label = row.querySelector('.sd-hand');
+                if (shown < 5) {
+                    const partial = Showdown.evaluatePartial(hand.cards.slice(0, shown));
+                    label.textContent = partial.category > 0 ? partial.name : '';
+                } else {
+                    label.textContent = hand.result.name;
+                }
+            });
+
+            if (shown === 4) {
+                // 最後の1枚を残した時点でのリーチ演出
+                if (packet.comeback.isComeback) {
+                    banner.className = 'showdown-banner is-tense';
+                    banner.textContent = '👑 ' + packet.comeback.leaderNames.join(' / ') + ' がリード！ 残り1枚';
+                    note.textContent = 'このまま決まるか…？';
+                } else {
+                    note.textContent = '残り1枚';
+                }
             }
-        })();
+
+            if (shown < 5) {
+                setTimeout(revealStep, shown === 3 ? 1400 : 900);
+                return;
+            }
+
+            finish();
+        }
+
+        function finish() {
+            const winnerRow = rows[packet.hands.findIndex(h => h.team.id === packet.winner.id)];
+            const winnerHand = packet.hands.find(h => h.team.id === packet.winner.id);
+
+            rows.forEach(r => r.classList.remove('is-leading'));
+            winnerRow.classList.add('is-winner');
+
+            if (packet.comeback.isComeback) {
+                banner.className = 'showdown-banner is-comeback';
+                banner.textContent = '⚡ 大逆転！！ ' + packet.winner.name + '！';
+            } else {
+                banner.className = 'showdown-banner is-win';
+                banner.textContent = '🏆 ' + packet.winner.name + ' の勝ち';
+            }
+
+            const flavor = Showdown.flavorFor(winnerHand.result);
+            note.textContent = winnerHand.result.name + ' で ' + packet.winner.name + ' が交渉権を獲得' +
+                (flavor ? '  —  ' + flavor : '');
+
+            document.getElementById('btn-apply-lottery').disabled = false;
+            spinBtn.disabled = false;
+            spinBtn.textContent = '配り直す';
+        }
+
+        setTimeout(revealStep, 600);
     }
 
     function applyLottery() {
@@ -802,7 +876,7 @@
             .then(() => {
                 D.toast(lotteryCtx.winner.name + 'が獲得。他' + losers.length + 'チームは再指名です', 'success', 5000);
                 bootstrap.Modal.getInstance(document.getElementById('lotteryModal')).hide();
-                document.getElementById('btn-spin').textContent = '抽選スタート';
+                document.getElementById('btn-spin').textContent = '勝負！';
                 lotteryCtx = null;
             })
             .catch(err => D.toast('エラー: ' + err.message, 'danger'));
