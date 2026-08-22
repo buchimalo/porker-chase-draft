@@ -365,7 +365,7 @@
                 (team && team.color ? team.color : 'currentColor') + '"></span>';
         }
         return '<img class="team-avatar' + cls + '" src="' + esc(url) +
-            '" alt="" loading="lazy" style="background:' +
+            '" alt="" style="background:' +
             (team && team.color ? team.color : 'transparent') + '">';
     }
 
