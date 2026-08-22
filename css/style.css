@@ -10,37 +10,37 @@
 
 :root {
     /* 面 */
-    --void: #0b0e11;
-    --carbon: #1c2127;
-    --obsidian: #262c33;
-    --raised: #323941;
+    --void: #121212;
+    --carbon: #181818;
+    --obsidian: #1f1f1f;
+    --raised: #2a2a2a;
 
     /* 境界 */
-    --line: #2f353d;
-    --line-strong: #414952;
-    --line-bright: #566068;
+    --line: #282828;
+    --line-strong: #3e3e3e;
+    --line-bright: #7c7c7c;
 
     /* 文字 */
     --paper: #ffffff;
-    --mist: #e8ecf1;
-    --fog: #aeb6c0;
-    --ash: #8b939d;
+    --mist: #ffffff;
+    --fog: #b3b3b3;
+    --ash: #a7a7a7;
 
     /* アクセント（操作できるものにだけ使う） */
-    --accent: #d7f14b;
-    --accent-dim: rgba(215, 241, 75, 0.12);
-    --accent-line: rgba(215, 241, 75, 0.35);
-    --on-accent: #10130a;
+    --accent: #1ed760;
+    --accent-dim: rgba(30, 215, 96, 0.14);
+    --accent-line: rgba(30, 215, 96, 0.4);
+    --on-accent: #000000;
 
     /* 状態 */
-    --green: #35c26a;
-    --red: #f4515f;
-    --amber: #eaa13a;
-    --blue: #5b9dff;
+    --green: #1ed760;
+    --red: #f3727f;
+    --amber: #ffa42b;
+    --blue: #539df5;
 
-    --r-sm: 6px;
-    --r-md: 8px;
-    --r-lg: 12px;
+    --r-sm: 4px;
+    --r-md: 6px;
+    --r-lg: 8px;
     --r-pill: 9999px;
 
     --font: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI',
@@ -118,12 +118,12 @@ h5 {
 }
 
 .brand-mark {
-    width: 34px;
-    height: 34px;
-    flex: 0 0 34px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
     display: grid;
     place-items: center;
-    border-radius: var(--r-md);
+    border-radius: 50%;
     background: var(--accent);
     color: var(--on-accent);
     font-size: 15px;
@@ -182,10 +182,10 @@ h5 {
     justify-content: center;
     gap: 6px;
     height: 32px;
-    padding: 0 12px;
-    border-radius: var(--r-sm);
+    padding: 0 16px;
+    border-radius: var(--r-pill);
     border: none;
-    background: var(--raised);
+    background: var(--obsidian);
     color: var(--mist);
     font-family: var(--font);
     font-size: 13px;
@@ -194,12 +194,16 @@ h5 {
     white-space: nowrap;
     text-decoration: none;
     cursor: pointer;
-    transition: background .12s ease, border-color .12s ease, color .12s ease;
+    transition: background .15s ease, color .15s ease, transform .1s ease;
 }
 
 .btn2:hover:not(:disabled) {
-    background: var(--line-strong);
+    background: var(--raised);
     color: var(--paper);
+}
+
+.btn2:active:not(:disabled) {
+    transform: scale(.97);
 }
 
 .btn2:focus-visible {
@@ -215,12 +219,13 @@ h5 {
 .btn2-gold {
     background: var(--accent);
     color: var(--on-accent);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .btn2-gold:hover:not(:disabled) {
-    background: #e3fa64;
+    background: #1fdf64;
     color: var(--on-accent);
+    transform: scale(1.04);
 }
 
 .btn2-danger {
@@ -442,8 +447,8 @@ h5 {
     display: inline-flex;
     align-items: center;
     height: 20px;
-    padding: 0 8px;
-    border-radius: var(--r-sm);
+    padding: 0 9px;
+    border-radius: var(--r-pill);
     border: none;
     font-size: 12px;
     font-weight: 500;
@@ -1030,13 +1035,12 @@ table.matrix td.empty {
 }
 
 .input,
-.textarea,
 .select {
     width: 100%;
-    padding: 9px 11px;
-    border-radius: var(--r-sm);
-    border: 1px solid var(--line-strong);
-    background: var(--void);
+    padding: 10px 16px;
+    border-radius: var(--r-pill);
+    border: none;
+    background: var(--obsidian);
     color: var(--paper);
     font-family: var(--font);
     font-size: 14px;
@@ -1053,7 +1057,17 @@ table.matrix td.empty {
 .textarea:focus,
 .select:focus {
     outline: none;
-    border-color: var(--accent-line);
+    box-shadow: inset 0 0 0 1px var(--line-bright);
+}
+
+.textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    border: none;
+    background: var(--obsidian);
+    color: var(--paper);
+    font-family: var(--font);
 }
 
 .input-lg {
@@ -1159,9 +1173,9 @@ table.matrix td.empty {
 
 .pool-chip {
     appearance: none;
-    height: 30px;
-    padding: 0 12px;
-    border-radius: var(--r-sm);
+    height: 32px;
+    padding: 0 15px;
+    border-radius: var(--r-pill);
     border: none;
     background: var(--obsidian);
     color: var(--mist);
@@ -1230,7 +1244,7 @@ table.matrix td.empty {
     width: 18px;
     height: 18px;
     border: none;
-    border-radius: var(--r-sm);
+    border-radius: 50%;
     background: var(--raised);
     color: var(--fog);
     font-family: var(--font);
@@ -1549,16 +1563,16 @@ table.matrix td.empty {
     display: inline-flex;
     gap: 2px;
     padding: 3px;
-    border-radius: var(--r-sm);
-    background: var(--void);
+    border-radius: var(--r-pill);
+    background: #000;
 }
 
 .seg button {
     appearance: none;
-    height: 22px;
-    padding: 0 11px;
+    height: 24px;
+    padding: 0 13px;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--r-pill);
     background: transparent;
     color: var(--fog);
     font-family: var(--font);
@@ -1573,7 +1587,7 @@ table.matrix td.empty {
 }
 
 .seg button.active {
-    background: var(--line-strong);
+    background: var(--raised);
     color: var(--paper);
 }
 
@@ -1789,4 +1803,98 @@ body.view-mode .admin-only {
     .pick-player {
         color: #000;
     }
+}
+
+/* ============================================================
+   Spotify 流の仕上げ
+   - 面はホバーで一段明るくする
+   - 暗い背景では影を濃くしないと効かない
+   - 見出しは太く詰める
+   ============================================================ */
+
+.panel {
+    background: var(--carbon);
+}
+
+.pick-card,
+.team-card,
+.pl-item,
+.sd-row {
+    transition: background .2s ease;
+}
+
+.pick-card:hover,
+.pl-item:hover {
+    background: var(--raised);
+}
+
+.team-card:hover {
+    background: var(--obsidian);
+    box-shadow: rgba(0, 0, 0, .4) 0 8px 20px;
+}
+
+/* 見出しは太く、詰める */
+h1,
+h2,
+h3,
+h4,
+h5,
+.panel-title,
+.modal-title,
+.brand-title,
+.pick-player,
+.team-card-head,
+.conflict-player,
+.sheet-status-text strong {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.round-badge .num {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* 小見出しは大文字＋字間を広げる（ボタンラベルの流儀） */
+.field-label,
+table.tbl th {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--fog);
+}
+
+/* モーダルは濃い影で浮かせる */
+.modal-content {
+    box-shadow: rgba(0, 0, 0, .5) 0 8px 24px;
+}
+
+/* トーストも同様 */
+.toast {
+    box-shadow: rgba(0, 0, 0, .4) 0 6px 18px;
+}
+
+/* 行リストはホバーで明るく（プレイリストの挙動） */
+table.tbl tbody tr:hover td {
+    background: var(--obsidian);
+}
+
+/* 緑は機能的な場面にだけ。勝者行は控えめな緑の面 */
+.sd-row.is-winner {
+    background: rgba(30, 215, 96, .16);
+}
+
+.sd-hand {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* 進捗バーは Spotify のシークバー風に、ホバーで緑 */
+.progress-track {
+    height: 4px;
+    background: var(--line-strong);
+}
+
+.progress-fill {
+    background: var(--accent);
 }
