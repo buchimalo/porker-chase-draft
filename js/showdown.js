@@ -309,7 +309,7 @@
         const dramaChance = typeof opts.dramaChance === 'number' ? opts.dramaChance : 0.35;
 
         const winner = teams[Math.floor(Math.random() * teams.length)];
-        const objectionChance = typeof opts.objectionChance === 'number' ? opts.objectionChance : 0.12;
+        const objectionChance = typeof opts.objectionChance === 'number' ? opts.objectionChance : 0.20;
         const wantDrama = Math.random() < dramaChance;
 
         // 「ちょっとまったー！」— 一度負けたチームが無茶苦茶な札で全部ひっくり返す
