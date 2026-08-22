@@ -37,6 +37,7 @@
             <div class="topbar-actions no-obs">
                 <button class="btn2 admin-only" id="btn-prev-round">← 前の巡</button>
                 <button class="btn2 admin-only" id="btn-next-round">次の巡 →</button>
+                <button class="btn2" id="btn-show-player-list">選手一覧</button>
                 <button class="btn2 btn2-gold" id="btn-show-results">結果一覧</button>
                 <button class="btn2 admin-only" id="btn-toggle-admin" title="管理パネル">⚙</button>
             </div>
@@ -203,6 +204,31 @@
         </div>
     </div>
 
+    <!-- 選手一覧モーダル -->
+    <div class="modal fade" id="playerListModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">👥 選手一覧</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                        <span class="field-label" style="margin:0" id="player-list-count"></span>
+                        <div class="spacer"></div>
+                        <div class="seg" id="player-list-filter">
+                            <button data-view="all" class="active">すべて</button>
+                            <button data-view="free">未指名のみ</button>
+                        </div>
+                    </div>
+                    <input type="text" class="input mb-3" id="player-list-search" placeholder="🔍 選手名で絞り込み"
+                        autocomplete="off">
+                    <div class="player-list" id="player-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 選手リスト編集モーダル -->
     <div class="modal fade" id="playersModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
