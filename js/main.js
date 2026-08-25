@@ -66,6 +66,7 @@
         on('btn-save-teams', saveTeams);
         on('btn-copy-urls', copyAllTeamSheetUrls);
         on('btn-add-player', addPlayer);
+        on('btn-add-roulette-slot', addRouletteSlot);
         on('btn-toggle-bulk', toggleBulk);
         on('btn-apply-bulk', applyBulk);
 
@@ -327,7 +328,7 @@
         let html = '<div class="conflict-alert"><h6>指名が重複しています — 抽選が必要です</h6>';
         conflicts.forEach(c => {
             html += '<div class="conflict-item">' +
-                '<span class="conflict-player">' + (D.normalizeName(c.name) === D.normalizeName(D.ROULETTE_LABEL) ? '🎰 ' : '') + D.esc(c.name) + '</span>' +
+                '<span class="conflict-player">' + (D.isRouletteName(c.name) ? '🎰 ' : '') + D.esc(c.name) + '</span>' +
                 '<span class="conflict-teams">' + c.teamIds.map(id => D.esc(nameOf(id))).join(' / ') + '</span>' +
                 '<button class="btn2 btn2-gold btn2-sm admin-only no-obs" data-lottery-key="' + D.esc(c.key) + '">抽選する</button>' +
                 '</div>';
@@ -408,6 +409,8 @@
         const team = currentTeams().find(t => t.id === teamId);
         if (!team) return;
 
+        const nom = D.roundData(state.nominations, state.currentRound)[teamId];
+        const slot = (nom && nom.playerName) || D.ROULETTE_LABEL;
         const items = rouletteItems();
         const stage = document.getElementById('roulette-stage');
         const banner = document.getElementById('roulette-banner');
@@ -415,7 +418,7 @@
         const spinBtn = document.getElementById('btn-roulette-spin');
         const applyBtn = document.getElementById('btn-roulette-apply');
 
-        document.getElementById('roulette-team').textContent = team.name;
+        document.getElementById('roulette-team').textContent = team.name + '（' + slot + '）';
         banner.textContent = '';
         banner.classList.remove('show');
         stage.classList.remove('is-settled');
@@ -429,7 +432,7 @@
         } else {
             // 当選者を先に均等ランダムで決めてから、そこで止まるように回す
             const winnerIndex = Math.floor(Math.random() * items.length);
-            rouletteCtx = { teamId: team.id, teamName: team.name, items: items, winnerIndex: winnerIndex, done: false };
+            rouletteCtx = { teamId: team.id, teamName: team.name, slot: slot, items: items, winnerIndex: winnerIndex, done: false };
             window.Roulette.render(stage, items);
             note.textContent = items.length + ' 名からランダムに1名を獲得します';
             spinBtn.disabled = false;
@@ -488,12 +491,14 @@
         const updates = {};
         updates[base + '/playerName'] = ctx.winner;
         updates[base + '/rouletteWon'] = true;
+        updates[base + '/rouletteSlot'] = ctx.slot;
         updates[base + '/status'] = 'confirmed';
         updates[base + '/timestamp'] = Date.now();
         updates['draft/rouletteLog/round' + state.currentRound + '/' + ctx.teamId] = {
             playerName: ctx.winner,
             teamId: ctx.teamId,
             teamName: ctx.teamName,
+            slot: ctx.slot,
             candidates: ctx.items,
             timestamp: Date.now()
         };
@@ -985,8 +990,9 @@
 
         playerDraft.forEach((name, index) => {
             const chip = document.createElement('span');
-            chip.className = 'pool-chip player-chip';
-            chip.innerHTML = D.esc(name) +
+            const rl = D.isRouletteName(name);
+            chip.className = 'pool-chip player-chip' + (rl ? ' is-roulette-slot' : '');
+            chip.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
                 '<button type="button" class="chip-remove" title="削除">✕</button>';
             chip.querySelector('.chip-remove').addEventListener('click', () => {
                 playerDraft.splice(index, 1);
@@ -994,6 +1000,20 @@
             });
             box.appendChild(chip);
         });
+    }
+
+    // 選手リストに「ルーレット①」「ルーレット②」…を1つずつ足す
+    function addRouletteSlot() {
+        for (let i = 0; i < D.ROULETTE_MAX; i++) {
+            const name = D.rouletteSlotName(i);
+            const key = D.normalizeName(name);
+            if (playerDraft.some(pl => D.normalizeName(pl) === key)) continue;
+            playerDraft.push(name);
+            renderPlayerEditor();
+            D.toast('「' + name + '」を追加しました', 'info');
+            return;
+        }
+        D.toast('ルーレット枠は' + D.ROULETTE_MAX + '個までです', 'danger');
     }
 
     function addPlayer() {
@@ -1079,7 +1099,7 @@
             winner: null
         };
 
-        const isRl = D.normalizeName(target.name) === D.normalizeName(D.ROULETTE_LABEL);
+        const isRl = D.isRouletteName(target.name);
         document.getElementById('lottery-player').textContent = (isRl ? '🎰 ' : '') + target.name;
         document.getElementById('showdown').innerHTML = '';
         document.getElementById('showdown-banner').className = 'showdown-banner';

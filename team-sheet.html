@@ -87,13 +87,6 @@
                         <button class="btn2 btn2-lg" id="btn-tentative">仮で出す</button>
                         <button class="btn2 btn2-gold btn2-lg" id="btn-submit">確定して送信</button>
                     </div>
-
-                    <div class="field hide mt-3" id="roulette-block" style="margin-bottom:0">
-                        <span class="field-label">または</span>
-                        <button class="btn2 btn2-lg" id="btn-roulette-pick"
-                            style="width:100%">🎰 ルーレットで決める</button>
-                        <p class="panel-note mt-2" id="roulette-block-note"></p>
-                    </div>
                     <p class="panel-note mt-2" id="submit-note">
                         「仮で出す」は盤面に表示されますが、何度でも変更できます。
                         「確定して送信」を押すと変更できなくなります。
@@ -129,35 +122,6 @@
                 <div class="modal-footer">
                     <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
                     <button type="button" class="btn2 btn2-gold" id="btn-confirm">確定する（変更不可）</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ルーレット指名の確認モーダル -->
-    <div class="modal fade" id="rouletteConfirmModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">ルーレット指名の確認</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="muted mb-2">第<span id="rl-confirm-round"></span>巡目の指名を<strong>ルーレット</strong>にします。</p>
-                    <p style="font-size:1.6rem;font-weight:800;margin:0 0 10px">🎰 ルーレット</p>
-                    <p class="panel-note" id="rl-confirm-list"></p>
-                    <p class="panel-note">
-                        進行役がルーレットを回し、止まった選手をそのまま獲得します。
-                        選手は選べません。送信後の変更もできません。
-                    </p>
-                    <p class="panel-note">
-                        他の監督もルーレットを選んだ場合は<strong>ポーカー抽選</strong>になり、
-                        勝った1チームだけが回せます。負けた場合は選手を指名し直してください。
-                    </p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
-                    <button type="button" class="btn2 btn2-gold" id="btn-roulette-confirm">ルーレットで確定する</button>
                 </div>
             </div>
         </div>

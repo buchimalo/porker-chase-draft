@@ -56,8 +56,6 @@
         document.getElementById('btn-submit').addEventListener('click', submitNomination);
         document.getElementById('btn-tentative').addEventListener('click', submitTentative);
         document.getElementById('btn-confirm').addEventListener('click', confirmNomination);
-        document.getElementById('btn-roulette-pick').addEventListener('click', askRoulette);
-        document.getElementById('btn-roulette-confirm').addEventListener('click', confirmRoulette);
         document.getElementById('btn-show-results').addEventListener('click', showResults);
         document.getElementById('btn-switch-team').addEventListener('click', () => {
             state.teamId = null;
@@ -120,7 +118,6 @@
         lastRound = state.currentRound;
 
         renderStatus();
-        renderRouletteBlock();
         renderPool();
         renderWarnings();
         renderHistory();
@@ -173,8 +170,8 @@
             box.classList.add('state-redo');
             icon.textContent = '!';
             title.textContent = '抽選負け — 再指名してください';
-            detail.textContent = D.isRoulette(nom)
-                ? 'ルーレットが他チームと重複し、抽選に負けました。選手を指名してください。'
+            detail.textContent = D.isRouletteName(nom.playerName)
+                ? '「' + nom.playerName + '」が他チームと重複し、抽選に負けました。別の枠か選手を指名してください。'
                 : '「' + nom.playerName + '」は他チームが獲得しました。別の選手を指名してください。';
             submitBtn.textContent = '確定して送信';
             note.textContent = '「仮で出す」で様子を見てから確定できます。';
@@ -183,7 +180,7 @@
             // ルーレットで送信済み。進行役が回すのを待っている
             box.classList.add('state-tentative');
             icon.textContent = '🎰';
-            title.textContent = 'ルーレット送信済み — 抽選待ち';
+            title.textContent = nom.playerName + ' で送信済み — 抽選待ち';
             detail.textContent = '進行役がルーレットを回します。止まった選手をそのまま獲得します。';
             submitBtn.disabled = true;
             tentBtn.disabled = true;
@@ -284,7 +281,10 @@
             } else {
                 if (key === current) btn.classList.add('selected');
                 const rival = contested.get(key);
-                btn.innerHTML = D.esc(name) + (rival ? '<span class="by">⚔ ' + D.esc(rival) + '</span>' : '');
+                const rl = D.isRouletteName(name);
+                if (rl) btn.classList.add('is-roulette-slot');
+                btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
+                    (rival ? '<span class="by">⚔ ' + D.esc(rival) + '</span>' : '');
                 btn.addEventListener('click', () => {
                     document.getElementById('player-name').value = name;
                     renderPool();
@@ -321,6 +321,15 @@
         const pool = D.playerPool({ players: state.players });
         if (pool.length && !pool.some(p => D.normalizeName(p) === key)) {
             warnings.push({ type: 'info', text: '候補選手リストにない名前です。入力ミスにご注意ください' });
+        }
+
+        if (D.isRouletteName(name)) {
+            const items = rouletteItems();
+            warnings.push({
+                type: 'warn',
+                text: 'ルーレット枠です。選手は選べません — 進行役が回して止まった1名を獲得します' +
+                    (items.length ? '（出目：' + items.join('・') + '）' : '')
+            });
         }
 
         return warnings;
@@ -385,68 +394,8 @@
         }, state.currentRound);
     }
 
-    function renderRouletteBlock() {
-        const block = document.getElementById('roulette-block');
-        const btn = document.getElementById('btn-roulette-pick');
-        const note = document.getElementById('roulette-block-note');
-        if (!block) return;
 
-        const items = rouletteItems();
-        const nom = myNomination();
-        const lostRoulette = D.isRoulette(nom) && D.isLost(nom);
-        const locked = D.isActive(nom) || D.isRouletteWaiting(nom) || lostRoulette;
-
-        if (!items.length) { block.classList.add('hide'); return; }
-        block.classList.remove('hide');
-
-        btn.disabled = locked;
-        note.textContent = lostRoulette
-            ? 'ルーレットの抽選に負けたため、この巡は選手を指名してください。'
-            : locked
-                ? 'この巡の指名は送信済みです。'
-                : '現在の出目：' + items.join('・') + '（' + items.length + '名）';
-    }
-
-    // ルーレット指名の確認モーダルを出す
-    function askRoulette() {
-        const nom = myNomination();
-        if (D.isActive(nom) || D.isRouletteWaiting(nom)) {
-            D.toast('送信済みのため変更できません', 'danger');
-            return;
-        }
-        if (D.isRoulette(nom) && D.isLost(nom)) {
-            D.toast('ルーレットの抽選に負けたため、選手を指名してください', 'danger', 5000);
-            return;
-        }
-        const items = rouletteItems();
-        if (!items.length) {
-            D.toast('回せる選手がいません', 'danger');
-            return;
-        }
-
-        document.getElementById('rl-confirm-round').textContent = state.currentRound;
-        document.getElementById('rl-confirm-list').textContent =
-            '出目：' + items.join('・') + '（' + items.length + '名）';
-        new bootstrap.Modal(document.getElementById('rouletteConfirmModal')).show();
-    }
-
-    function confirmRoulette() {
-        const btn = document.getElementById('btn-roulette-confirm');
-        btn.disabled = true;
-
-        writeNomination(D.ROULETTE_LABEL, false, true)
-            .then(function () {
-                bootstrap.Modal.getInstance(document.getElementById('rouletteConfirmModal')).hide();
-                document.getElementById('player-name').value = '';
-                poolFilter = '';
-                document.getElementById('pool-search').value = '';
-                D.toast('ルーレットで送信しました。進行役が回すのを待ってください', 'success', 5000);
-            })
-            .catch(err => D.toast('エラー: ' + err.message, 'danger', 6000))
-            .then(function () { btn.disabled = false; });
-    }
-
-    function writeNomination(name, tentative, roulette) {
+    function writeNomination(name, tentative) {
         const round = state.currentRound;
         const team = state.teams[state.teamId];
         const teamName = (team && team.name) || state.teamId;
@@ -468,7 +417,6 @@
             timestamp: Date.now(),
             status: tentative ? 'tentative' : 'confirmed'
         };
-        if (roulette) payload.roulette = true;
         if (attempts.length) payload.attempts = attempts;
 
         return db.ref('draft/nominations/round' + round + '/' + state.teamId).set(payload);

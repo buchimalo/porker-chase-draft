@@ -20,6 +20,8 @@
     const ADMIN_KEY = 'pcd.admin';
     const ROULETTE_LABEL = 'ルーレット';
     const ROULETTE_MAX = 10;
+    // 選手リストに入れる「ルーレット枠」の名前（ルーレット① / ルーレット② …）
+    const CIRCLED_NUMS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮';
 
     let db;
     if (DEMO) {
@@ -273,14 +275,31 @@
         return !!nomination && nomination.status === 'tentative';
     }
 
-    // ルーレット指名。当選するまでは playerName が「ルーレット」のまま入っている
-    function isRoulette(nomination) {
-        return !!nomination && !!nomination.roulette;
+    // i 番目のルーレット枠の名前
+    function rouletteSlotName(index) {
+        const mark = CIRCLED_NUMS.charAt(index);
+        return ROULETTE_LABEL + (mark || String(index + 1));
     }
 
-    // まだ回していないルーレット指名（重複判定・再指名チェックの対象外）
+    // 「ルーレット」「ルーレット①」など、ルーレット枠の名前かどうか
+    function isRouletteName(name) {
+        const key = normalizeName(name);
+        if (!key) return false;
+        return key.indexOf(normalizeName(ROULETTE_LABEL)) === 0;
+    }
+
+    // ルーレットで獲得した（もしくはこれから獲得する）指名
+    function isRoulette(nomination) {
+        if (!nomination) return false;
+        return !!nomination.roulette || !!nomination.rouletteSlot ||
+            isRouletteName(nomination.playerName);
+    }
+
+    // まだ回していないルーレット指名（当選すると playerName が実際の選手名に変わる）
     function isRouletteWaiting(nomination) {
-        return isRoulette(nomination) && !nomination.rouletteWon && !isLost(nomination);
+        if (!nomination || isLost(nomination)) return false;
+        if (nomination.rouletteWon) return false;
+        return isRouletteName(nomination.playerName);
     }
 
     // 確定済みの指名だけを対象にする（抽選・進行判定・再指名チェックはこれを使う）
@@ -326,7 +345,18 @@
             if (options.beforeRound && r >= options.beforeRound) break;
             const data = roundData(nominationsData, r);
             Object.entries(data).forEach(([teamId, nom]) => {
-                if (!isActive(nom) || isRouletteWaiting(nom)) return;
+                if (!isActive(nom)) return;
+
+                // ルーレット枠は当選後も枠自体を使用済みにする（二度は使えない）
+                if (nom.rouletteSlot) {
+                    const slotKey = normalizeName(nom.rouletteSlot);
+                    if (slotKey && !map.has(slotKey)) {
+                        map.set(slotKey, { name: nom.rouletteSlot, round: r, teamId });
+                    }
+                }
+
+                // 回す前の「ルーレット①」は選手名ではないので数えない
+                if (isRouletteWaiting(nom)) return;
                 const key = normalizeName(nom.playerName);
                 if (!key || map.has(key)) return;
                 map.set(key, { name: nom.playerName, round: r, teamId });
@@ -583,6 +613,8 @@
         isRouletteWaiting,
         ROULETTE_LABEL,
         ROULETTE_MAX,
+        rouletteSlotName,
+        isRouletteName,
         renderResultsGrid,
         renderResultsMatrix,
         toast,

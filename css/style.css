@@ -2367,3 +2367,14 @@ body.guest-mode .admin-only {
 .rl-label.is-flip {
     transform: rotate(180deg);
 }
+
+/* 候補リスト内のルーレット枠 */
+.pool-chip.is-roulette-slot {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.pool-chip.is-roulette-slot.selected {
+    color: var(--on-accent);
+}
