@@ -12,7 +12,8 @@
         nominations: {},
         currentRound: 1,
         settings: { totalRounds: D.DEFAULT_ROUNDS, hidePicks: false, revealed: {} },
-        players: ''
+        players: '',
+        fromUrl: false
     };
 
     let poolFilter = '';
@@ -23,7 +24,9 @@
 
     function init() {
         D.applyDisplayModes();
-        state.teamId = D.param('team') || safeStorageGet(STORAGE_KEY);
+        const urlTeam = D.param('team');
+        state.fromUrl = !!urlTeam;
+        state.teamId = urlTeam || safeStorageGet(STORAGE_KEY);
         bindEvents();
 
         db.ref('draft').on('value', snapshot => {
@@ -35,7 +38,10 @@
             state.players = data.players || '';
 
             // チームIDが不正なら選択画面に戻す
-            if (state.teamId && !state.teams[state.teamId]) state.teamId = null;
+            if (state.teamId && !state.teams[state.teamId]) {
+                state.teamId = null;
+                state.fromUrl = false;
+            }
 
             render();
         }, error => {
@@ -87,7 +93,8 @@
 
         picker.classList.add('hide');
         main.classList.remove('hide');
-        document.getElementById('btn-switch-team').classList.remove('hide');
+        // URLでチームが指定されている場合は切替不要（誤操作防止）
+        document.getElementById('btn-switch-team').classList.toggle('hide', state.fromUrl);
 
         const team = state.teams[state.teamId];
         document.getElementById('team-name').textContent = (team && team.name) || state.teamId;
