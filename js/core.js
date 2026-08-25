@@ -586,6 +586,170 @@
 
     /* ---------- 公開 ---------- */
 
+
+    /* ---------- 結果のテキスト書き出し ---------- */
+
+    const CRLF = String.fromCharCode(13) + String.fromCharCode(10);
+
+    function pad2(n) {
+        return ('0' + n).slice(-2);
+    }
+
+    function stamp(date) {
+        const d = date || new Date();
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
+            ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    }
+
+    function fileStamp(date) {
+        const d = date || new Date();
+        return String(d.getFullYear()) + pad2(d.getMonth() + 1) + pad2(d.getDate()) +
+            '-' + pad2(d.getHours()) + pad2(d.getMinutes());
+    }
+
+    function rule(char) {
+        return new Array(49).join(char || '=');
+    }
+
+    // 1件の指名を「選手名（補足）」の形にする
+    function pickText(nom) {
+        if (!nom || !nom.playerName) return '(未指名)';
+        if (isRouletteWaiting(nom)) return nom.playerName + '（抽選待ち）';
+        if (isLost(nom)) return nom.playerName + '（抽選負け）';
+        if (isTentative(nom)) return nom.playerName + '（仮）';
+        if (nom.rouletteSlot) return nom.playerName + '（' + nom.rouletteSlot + ' で獲得）';
+        return nom.playerName;
+    }
+
+    /**
+     * ドラフト結果をプレーンテキストにする。
+     * @param {object} draftData draft 直下のデータ
+     */
+    function buildResultsText(draftData) {
+        const data = draftData || {};
+        const settings = readSettings(data);
+        const teams = teamList(data.teams);
+        const noms = data.nominations || {};
+        const rounds = settings.totalRounds;
+        const lines = [];
+
+        let done = 0;
+        for (let r = 1; r <= rounds; r++) {
+            const round = roundData(noms, r);
+            teams.forEach(t => { if (isActive(round[t.id]) && !isRouletteWaiting(round[t.id])) done++; });
+        }
+
+        lines.push('ポカチェ ドラフト会議 — ドラフト結果');
+        lines.push('出力日時: ' + stamp());
+        lines.push('全' + rounds + '巡 / ' + teams.length + 'チーム / 指名確定 ' + done + ' 件');
+        lines.push('');
+
+        /* ---- チーム別 ---- */
+        lines.push(rule('='));
+        lines.push('チーム別');
+        lines.push(rule('='));
+        lines.push('');
+
+        teams.forEach(team => {
+            lines.push('■ ' + team.name);
+            for (let r = 1; r <= rounds; r++) {
+                const nom = roundData(noms, r)[team.id];
+                lines.push('   ' + r + '巡目\t' + pickText(nom));
+            }
+            lines.push('');
+        });
+
+        /* ---- 巡目別（指名順） ---- */
+        lines.push(rule('='));
+        lines.push('巡目別（指名順）');
+        lines.push(rule('='));
+        lines.push('');
+
+        for (let r = 1; r <= rounds; r++) {
+            const round = roundData(noms, r);
+            const ordered = orderedTeams(teams, r);
+            lines.push('【第' + r + '巡目】');
+            ordered.forEach((team, i) => {
+                lines.push('   ' + (i + 1) + '. ' + team.name + '\t' + pickText(round[team.id]));
+            });
+            lines.push('');
+        }
+
+        /* ---- 抽選の記録 ---- */
+        const lotteryRows = [];
+        Object.entries(data.lottery || {}).forEach(([roundKey, records]) => {
+            if (!records) return;
+            const r = parseInt(String(roundKey).replace('round', ''), 10) || 0;
+            Object.values(records).forEach(rec => {
+                if (rec && rec.playerName) lotteryRows.push({ round: r, rec });
+            });
+        });
+        lotteryRows.sort((a, b) => a.round - b.round);
+
+        if (lotteryRows.length) {
+            lines.push(rule('='));
+            lines.push('ポーカー抽選の記録');
+            lines.push(rule('='));
+            lines.push('');
+            lotteryRows.forEach(({ round, rec }) => {
+                const losers = Array.isArray(rec.loserTeamNames) ? rec.loserTeamNames : [];
+                lines.push('第' + round + '巡目  ' + rec.playerName);
+                lines.push('   獲得      ' + (rec.winnerTeamName || ''));
+                if (losers.length) lines.push('   抽選負け  ' + losers.join(' / '));
+                lines.push('');
+            });
+        }
+
+        /* ---- ルーレットの記録 ---- */
+        const rlRows = [];
+        Object.entries(data.rouletteLog || {}).forEach(([roundKey, records]) => {
+            if (!records) return;
+            const r = parseInt(String(roundKey).replace('round', ''), 10) || 0;
+            Object.values(records).forEach(rec => {
+                if (rec && rec.playerName) rlRows.push({ round: r, rec });
+            });
+        });
+        rlRows.sort((a, b) => a.round - b.round);
+
+        if (rlRows.length) {
+            lines.push(rule('='));
+            lines.push('ルーレットの記録');
+            lines.push(rule('='));
+            lines.push('');
+            rlRows.forEach(({ round, rec }) => {
+                const cand = Array.isArray(rec.candidates) ? rec.candidates : [];
+                lines.push('第' + round + '巡目  ' + (rec.slot || ROULETTE_LABEL));
+                lines.push('   獲得      ' + (rec.teamName || '') + ' → ' + rec.playerName);
+                if (cand.length) lines.push('   出目      ' + cand.join(' / '));
+                lines.push('');
+            });
+        }
+
+        return lines.join(CRLF);
+    }
+
+    // テキストをファイルとして保存させる
+    function downloadText(filename, text) {
+        // Windows のメモ帳で文字化けしないよう BOM を付ける
+        const blob = new Blob([String.fromCharCode(0xFEFF) + text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 0);
+    }
+
+    // 結果テキストを既定のファイル名で保存する
+    function downloadResultsText(draftData) {
+        downloadText('pokachi-draft-' + fileStamp() + '.txt', buildResultsText(draftData));
+    }
+
     global.Draft = {
         db,
         DEMO,
@@ -618,6 +782,9 @@
         renderResultsGrid,
         renderResultsMatrix,
         toast,
+        buildResultsText,
+        downloadResultsText,
+        downloadText,
         param,
         isAdmin,
         applyDisplayModes

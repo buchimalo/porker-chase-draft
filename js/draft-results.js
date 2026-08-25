@@ -9,7 +9,10 @@
         teams: {},
         nominations: {},
         settings: { totalRounds: D.DEFAULT_ROUNDS, hidePicks: false, revealed: {} },
-        lottery: {}
+        lottery: {},
+        rouletteLog: {},
+        players: '',
+        roulette: ''
     };
 
     let view = D.param('view2') === 'matrix' ? 'matrix' : 'grid';
@@ -33,6 +36,15 @@
         });
 
         document.getElementById('btn-print').addEventListener('click', () => window.print());
+        document.getElementById('btn-download-text').addEventListener('click', () => {
+            D.downloadResultsText({
+                teams: state.teams,
+                nominations: state.nominations,
+                settings: state.settings,
+                lottery: state.lottery,
+                rouletteLog: state.rouletteLog
+            });
+        });
 
         db.ref('draft').on('value', snapshot => {
             const data = snapshot.val() || {};
@@ -40,6 +52,7 @@
             state.nominations = data.nominations || {};
             state.settings = D.readSettings(data);
             state.lottery = data.lottery || {};
+            state.rouletteLog = data.rouletteLog || {};
             render();
         }, error => {
             console.error('データ取得エラー:', error);

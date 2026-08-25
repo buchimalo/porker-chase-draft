@@ -13,7 +13,9 @@
         currentRound: 1,
         settings: { totalRounds: D.DEFAULT_ROUNDS, hidePicks: false, revealed: {} },
         players: '',
-        roulette: ''
+        roulette: '',
+        lottery: {},
+        rouletteLog: {}
     };
 
     let historyView = 'list';
@@ -38,6 +40,8 @@
             state.settings = D.readSettings(data);
             state.players = data.players || '';
             state.roulette = data.roulette || '';
+            state.lottery = data.lottery || {};
+            state.rouletteLog = data.rouletteLog || {};
             render();
         }, error => {
             console.error('データ取得エラー:', error);
@@ -49,6 +53,7 @@
         on('btn-prev-round', () => changeRound(-1));
         on('btn-next-round', () => changeRound(1));
         on('btn-show-results', showResults);
+        on('btn-download-text', downloadResults);
         on('btn-show-player-list', showPlayerList);
         on('btn-toggle-admin', () => toggleAdmin());
         on('btn-close-admin', () => toggleAdmin(false));
@@ -1585,6 +1590,18 @@
     }
 
     /* ---------- 結果一覧 ---------- */
+
+    // 結果をテキストファイルとして保存する
+    function downloadResults() {
+        D.downloadResultsText({
+            teams: state.teams,
+            nominations: state.nominations,
+            settings: state.settings,
+            lottery: state.lottery,
+            rouletteLog: state.rouletteLog
+        });
+        D.toast('結果をテキストで保存しました', 'success');
+    }
 
     function showResults() {
         renderResults();
