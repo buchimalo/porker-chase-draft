@@ -2122,3 +2122,248 @@ table.tbl .team-cell {
 body.guest-mode .admin-only {
     display: none !important;
 }
+
+/* ============================================================
+   ルーレット抽選
+   ============================================================ */
+
+.rl-stage {
+    position: relative;
+    width: min(380px, 78vw);
+    height: min(380px, 78vw);
+    margin: 6px auto 18px;
+}
+
+.rl-wheel {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 8px var(--raised),
+        0 0 0 10px var(--line-strong),
+        0 18px 44px rgba(0, 0, 0, .55);
+    will-change: transform;
+}
+
+.rl-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    transition: filter .4s ease;
+}
+
+.rl-face.is-dim {
+    filter: saturate(.45) brightness(.62);
+}
+
+.rl-spoke {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 50%;
+    height: 0;
+    transform-origin: 0 0;
+}
+
+.rl-label {
+    position: absolute;
+    left: 26%;
+    top: -11px;
+    width: 70%;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 22px;
+    color: #10130a;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.rl-spoke.is-hit .rl-label {
+    color: #fff;
+    background: rgba(0, 0, 0, .78);
+    border-radius: var(--r-pill);
+    text-shadow: none;
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+.rl-hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 74px;
+    height: 74px;
+    margin: -37px 0 0 -37px;
+    border-radius: 50%;
+    background: var(--carbon);
+    border: 2px solid var(--line-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: var(--fog);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
+}
+
+.rl-pointer {
+    position: absolute;
+    left: 50%;
+    top: -14px;
+    width: 0;
+    height: 0;
+    margin-left: -15px;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 30px solid var(--accent);
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6));
+    z-index: 3;
+}
+
+.roulette-stage.is-spinning .rl-pointer {
+    animation: rl-tick .09s linear infinite;
+}
+
+@keyframes rl-tick {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(-9deg);
+    }
+}
+
+.roulette-stage {
+    position: relative;
+    text-align: center;
+}
+
+.roulette-target {
+    font-size: .9rem;
+    color: var(--fog);
+    margin-bottom: 10px;
+}
+
+.roulette-target strong {
+    color: var(--paper);
+    font-size: 1.05rem;
+}
+
+.roulette-banner {
+    min-height: 34px;
+    font-size: 1.55rem;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    margin: 4px 0 6px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity .35s ease, transform .35s ease;
+}
+
+.roulette-banner.show {
+    opacity: 1;
+    transform: none;
+    color: var(--accent);
+}
+
+.roulette-note {
+    font-size: .86rem;
+    color: var(--ash);
+    margin: 0;
+}
+
+.roulette-empty {
+    padding: 26px 14px;
+    text-align: center;
+    color: var(--ash);
+    font-size: .92rem;
+}
+
+/* 盤面・管理パネル側の表示 */
+
+.roulette-alert {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: var(--r-lg);
+    background: var(--obsidian);
+    border-left: 3px solid var(--accent);
+}
+
+.roulette-alert h6 {
+    margin: 0 0 10px;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--accent);
+}
+
+.roulette-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 7px 0;
+}
+
+.roulette-item + .roulette-item {
+    border-top: 1px solid var(--line);
+}
+
+.roulette-item .rl-team {
+    font-weight: 700;
+    color: var(--paper);
+}
+
+.roulette-item .rl-state {
+    font-size: .82rem;
+    color: var(--ash);
+}
+
+.pick-player.is-roulette {
+    color: var(--accent);
+    letter-spacing: -.01em;
+}
+
+.tag-roulette {
+    background: rgba(30, 215, 96, .16);
+    color: var(--accent);
+}
+
+.rl-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rl-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: var(--r-pill);
+    background: var(--raised);
+    border: 1px solid var(--line-strong);
+    font-size: .88rem;
+    color: var(--mist);
+}
+
+.rl-chip .rl-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+.rl-chip.is-out {
+    opacity: .42;
+    text-decoration: line-through;
+}
+
+.rl-label.is-flip {
+    transform: rotate(180deg);
+}

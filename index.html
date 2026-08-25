@@ -54,6 +54,7 @@
             </div>
             <div class="board" id="nominations-list"></div>
             <div id="conflict-alert"></div>
+            <div id="roulette-alert"></div>
         </section>
 
         <!-- 管理パネル -->
@@ -112,9 +113,11 @@
                     <div style="display:flex;gap:8px;flex-wrap:wrap">
                         <button class="btn2" id="btn-edit-teams">監督（チーム）を編集</button>
                         <button class="btn2" id="btn-edit-players">選手リストを編集</button>
+                        <button class="btn2" id="btn-edit-roulette">🎰 ルーレット対象を編集</button>
                         <button class="btn2 btn2-danger" id="btn-reset">ドラフトをリセット</button>
                     </div>
                     <p class="panel-note mt-2">選手リストを登録すると、各チームの指名シートで一覧から選べるようになります。</p>
+                    <p class="panel-note">ルーレット対象（最大10名）を登録すると、各監督が指名の代わりに「ルーレット」を選べるようになります。</p>
                 </div>
 
             </div>
@@ -173,6 +176,62 @@
                 <div class="modal-footer">
                     <button type="button" class="btn2 btn2-gold btn2-lg" id="btn-spin">勝負！</button>
                     <button type="button" class="btn2" id="btn-apply-lottery" disabled>結果を確定する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ルーレット抽選モーダル -->
+    <div class="modal fade" id="rouletteModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🎰 ルーレット抽選</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="roulette-target">指名：<strong id="roulette-team"></strong></div>
+                    <div class="roulette-stage" id="roulette-stage"></div>
+                    <div class="roulette-banner" id="roulette-banner"></div>
+                    <p class="roulette-note" id="roulette-note"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn2 btn2-gold btn2-lg" id="btn-roulette-spin">回す！</button>
+                    <button type="button" class="btn2" id="btn-roulette-apply" disabled>結果を確定する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ルーレット対象の編集モーダル -->
+    <div class="modal fade" id="rouletteEditModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">ルーレット対象の選手</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="panel-note mb-3">
+                        ここに入れた選手がルーレットの出目になります（最大10名）。
+                        既に指名で確定した選手は自動で盤から外れます。
+                    </p>
+
+                    <div class="player-add">
+                        <input type="text" class="input" id="roulette-add-input" placeholder="選手名を入力して追加"
+                            autocomplete="off">
+                        <button class="btn2 btn2-gold" id="btn-roulette-add">＋ 追加</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mt-3 mb-2">
+                        <span class="field-label" style="margin:0" id="roulette-count">0 / 10 名</span>
+                    </div>
+
+                    <div class="rl-chip-row" id="roulette-chips"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn2" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn2 btn2-gold" id="btn-save-roulette">保存</button>
                 </div>
             </div>
         </div>
@@ -275,6 +334,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/core.js"></script>
     <script src="js/showdown.js"></script>
+    <script src="js/roulette.js"></script>
     <script src="js/main.js"></script>
 </body>
 

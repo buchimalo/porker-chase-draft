@@ -18,6 +18,8 @@
     const params = new URLSearchParams(global.location.search);
     const DEMO = params.get('demo') === '1';
     const ADMIN_KEY = 'pcd.admin';
+    const ROULETTE_LABEL = 'ルーレット';
+    const ROULETTE_MAX = 10;
 
     let db;
     if (DEMO) {
@@ -90,6 +92,7 @@
                     '水無月遊夢', 'のぞみん', 'MOCHA', 'かつぶし', 'たっく',
                     'はまこみ', '漬けイクラ', 'ミジュマル', 'Makoto', 'おお@もぎたて',
                     'エイトワン', 'あるふぁたゃん', 'ぴしゃーちゃ', 'ぷぅ', 'NoraDDR'].join('\n'),
+                roulette: ['助っ人A', '助っ人B', '助っ人C', '助っ人D', '助っ人E'].join('\n'),
                 settings: { totalRounds: 6, hidePicks: false }
             }
         };
@@ -270,6 +273,16 @@
         return !!nomination && nomination.status === 'tentative';
     }
 
+    // ルーレット指名。当選するまでは playerName が「ルーレット」のまま入っている
+    function isRoulette(nomination) {
+        return !!nomination && !!nomination.roulette;
+    }
+
+    // まだ回していないルーレット指名（重複判定・再指名チェックの対象外）
+    function isRouletteWaiting(nomination) {
+        return isRoulette(nomination) && !nomination.rouletteWon && !isLost(nomination);
+    }
+
     // 確定済みの指名だけを対象にする（抽選・進行判定・再指名チェックはこれを使う）
     function isActive(nomination) {
         return !!nomination && !!nomination.playerName && !isLost(nomination) && !isTentative(nomination);
@@ -289,7 +302,7 @@
         const buckets = {};
 
         Object.entries(data).forEach(([teamId, nom]) => {
-            if (!isActive(nom)) return;
+            if (!isActive(nom) || isRouletteWaiting(nom)) return;
             const key = normalizeName(nom.playerName);
             if (!key) return;
             if (!buckets[key]) buckets[key] = { name: nom.playerName, key, teamIds: [] };
@@ -312,7 +325,7 @@
             if (options.beforeRound && r >= options.beforeRound) break;
             const data = roundData(nominationsData, r);
             Object.entries(data).forEach(([teamId, nom]) => {
-                if (!isActive(nom)) return;
+                if (!isActive(nom) || isRouletteWaiting(nom)) return;
                 const key = normalizeName(nom.playerName);
                 if (!key || map.has(key)) return;
                 map.set(key, { name: nom.playerName, round: r, teamId });
@@ -344,6 +357,46 @@
             .split('\n')
             .map(s => s.trim())
             .filter(Boolean);
+    }
+
+    /* ---------- ルーレット抽選 ---------- */
+
+    // ルーレット対象の選手（最大 ROULETTE_MAX 名）
+    function roulettePool(draftData) {
+        const raw = (draftData && draftData.roulette) || '';
+        if (!raw) return [];
+        return String(raw)
+            .split(String.fromCharCode(10))
+            .map(s => s.trim())
+            .filter(Boolean)
+            .slice(0, ROULETTE_MAX);
+    }
+
+    /**
+     * その巡でまだ回せるルーレットの出目。
+     * 既に確定している選手・この巡で他チームが出している選手は盤から外す
+     * （同じ選手を2チームが獲得してしまうのを防ぐ）。
+     */
+    function rouletteAvailable(draftData, round) {
+        const pool = roulettePool(draftData);
+        if (!pool.length) return [];
+
+        const noms = (draftData && draftData.nominations) || {};
+        const settings = readSettings(draftData);
+        const taken = takenPlayers(noms, settings.totalRounds);
+
+        // 仮出し中の指名も避ける（確定前でも被らせない）
+        const inPlay = new Set();
+        Object.values(roundData(noms, round)).forEach(nom => {
+            if (!nom || !nom.playerName) return;
+            if (isLost(nom) || isRouletteWaiting(nom)) return;
+            inPlay.add(normalizeName(nom.playerName));
+        });
+
+        return pool.filter(name => {
+            const key = normalizeName(name);
+            return key && !taken.has(key) && !inPlay.has(key);
+        });
     }
 
     /* ---------- 監督アイコン ---------- */
@@ -523,6 +576,12 @@
         readSettings,
         isRevealed,
         playerPool,
+        roulettePool,
+        rouletteAvailable,
+        isRoulette,
+        isRouletteWaiting,
+        ROULETTE_LABEL,
+        ROULETTE_MAX,
         renderResultsGrid,
         renderResultsMatrix,
         toast,

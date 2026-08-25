@@ -13,6 +13,7 @@
         currentRound: 1,
         settings: { totalRounds: D.DEFAULT_ROUNDS, hidePicks: false, revealed: {} },
         players: '',
+        roulette: '',
         fromUrl: false
     };
 
@@ -36,6 +37,7 @@
             state.currentRound = data.currentRound || 1;
             state.settings = D.readSettings(data);
             state.players = data.players || '';
+            state.roulette = data.roulette || '';
 
             // チームIDが不正なら選択画面に戻す
             if (state.teamId && !state.teams[state.teamId]) {
@@ -54,6 +56,8 @@
         document.getElementById('btn-submit').addEventListener('click', submitNomination);
         document.getElementById('btn-tentative').addEventListener('click', submitTentative);
         document.getElementById('btn-confirm').addEventListener('click', confirmNomination);
+        document.getElementById('btn-roulette-pick').addEventListener('click', askRoulette);
+        document.getElementById('btn-roulette-confirm').addEventListener('click', confirmRoulette);
         document.getElementById('btn-show-results').addEventListener('click', showResults);
         document.getElementById('btn-switch-team').addEventListener('click', () => {
             state.teamId = null;
@@ -116,6 +120,7 @@
         lastRound = state.currentRound;
 
         renderStatus();
+        renderRouletteBlock();
         renderPool();
         renderWarnings();
         renderHistory();
@@ -172,12 +177,25 @@
             submitBtn.textContent = '確定して送信';
             note.textContent = '「仮で出す」で様子を見てから確定できます。';
 
+        } else if (nom && D.isRouletteWaiting(nom)) {
+            // ルーレットで送信済み。進行役が回すのを待っている
+            box.classList.add('state-tentative');
+            icon.textContent = '🎰';
+            title.textContent = 'ルーレット送信済み — 抽選待ち';
+            detail.textContent = '進行役がルーレットを回します。止まった選手をそのまま獲得します。';
+            submitBtn.disabled = true;
+            tentBtn.disabled = true;
+            submitBtn.textContent = '送信済み';
+            note.textContent = '訂正が必要な場合は進行役に「指名の取り消し」を依頼してください。';
+
         } else if (nom && D.isActive(nom)) {
             // 確定済み。もう変更できない
             box.classList.add('state-locked');
-            icon.textContent = '✓';
+            icon.textContent = D.isRoulette(nom) ? '🎰' : '✓';
             title.textContent = '確定：' + nom.playerName;
-            detail.textContent = 'この巡の指名は確定しました。変更はできません。';
+            detail.textContent = D.isRoulette(nom)
+                ? 'ルーレットで獲得しました。変更はできません。'
+                : 'この巡の指名は確定しました。変更はできません。';
             submitBtn.disabled = true;
             tentBtn.disabled = true;
             submitBtn.textContent = '確定済み';
@@ -351,7 +369,75 @@
     /* ---------- 送信 ---------- */
 
     // 指名を書き込む。tentative なら仮出し、そうでなければ確定
-    function writeNomination(name, tentative) {
+    /* ---------- ルーレット指名 ---------- */
+
+    function rouletteItems() {
+        return D.rouletteAvailable({
+            nominations: state.nominations,
+            roulette: state.roulette,
+            settings: {
+                totalRounds: state.settings.totalRounds,
+                hidePicks: state.settings.hidePicks,
+                revealed: state.settings.revealed
+            }
+        }, state.currentRound);
+    }
+
+    function renderRouletteBlock() {
+        const block = document.getElementById('roulette-block');
+        const btn = document.getElementById('btn-roulette-pick');
+        const note = document.getElementById('roulette-block-note');
+        if (!block) return;
+
+        const items = rouletteItems();
+        const nom = myNomination();
+        const locked = D.isActive(nom) || D.isRouletteWaiting(nom);
+
+        if (!items.length) { block.classList.add('hide'); return; }
+        block.classList.remove('hide');
+
+        btn.disabled = locked;
+        note.textContent = locked
+            ? 'この巡の指名は送信済みです。'
+            : '現在の出目：' + items.join('・') + '（' + items.length + '名）';
+    }
+
+    // ルーレット指名の確認モーダルを出す
+    function askRoulette() {
+        const nom = myNomination();
+        if (D.isActive(nom) || D.isRouletteWaiting(nom)) {
+            D.toast('送信済みのため変更できません', 'danger');
+            return;
+        }
+        const items = rouletteItems();
+        if (!items.length) {
+            D.toast('回せる選手がいません', 'danger');
+            return;
+        }
+
+        document.getElementById('rl-confirm-round').textContent = state.currentRound;
+        document.getElementById('rl-confirm-list').textContent =
+            '出目：' + items.join('・') + '（' + items.length + '名）';
+        new bootstrap.Modal(document.getElementById('rouletteConfirmModal')).show();
+    }
+
+    function confirmRoulette() {
+        const btn = document.getElementById('btn-roulette-confirm');
+        btn.disabled = true;
+
+        writeNomination(D.ROULETTE_LABEL, false, true)
+            .then(function () {
+                bootstrap.Modal.getInstance(document.getElementById('rouletteConfirmModal')).hide();
+                document.getElementById('player-name').value = '';
+                poolFilter = '';
+                document.getElementById('pool-search').value = '';
+                D.toast('ルーレットで送信しました。進行役が回すのを待ってください', 'success', 5000);
+            })
+            .catch(err => D.toast('エラー: ' + err.message, 'danger', 6000))
+            .then(function () { btn.disabled = false; });
+    }
+
+    function writeNomination(name, tentative, roulette) {
         const round = state.currentRound;
         const team = state.teams[state.teamId];
         const teamName = (team && team.name) || state.teamId;
@@ -373,6 +459,7 @@
             timestamp: Date.now(),
             status: tentative ? 'tentative' : 'confirmed'
         };
+        if (roulette) payload.roulette = true;
         if (attempts.length) payload.attempts = attempts;
 
         return db.ref('draft/nominations/round' + round + '/' + state.teamId).set(payload);

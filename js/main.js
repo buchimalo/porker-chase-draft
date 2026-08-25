@@ -12,7 +12,8 @@
         nominations: {},
         currentRound: 1,
         settings: { totalRounds: D.DEFAULT_ROUNDS, hidePicks: false, revealed: {} },
-        players: ''
+        players: '',
+        roulette: ''
     };
 
     let historyView = 'list';
@@ -20,6 +21,8 @@
     let lotteryCtx = null;  // { player, key, teamIds, winner }
     let teamDraft = null;   // チーム編集モーダルの作業用コピー
     let playerDraft = [];   // 選手リスト編集モーダルの作業用コピー
+    let rouletteDraft = []; // ルーレット対象編集モーダルの作業用コピー
+    let rouletteCtx = null; // { teamId, teamName, items, winnerIndex }
 
     /* ---------- 初期化 ---------- */
 
@@ -34,6 +37,7 @@
             state.currentRound = data.currentRound || 1;
             state.settings = D.readSettings(data);
             state.players = data.players || '';
+            state.roulette = data.roulette || '';
             render();
         }, error => {
             console.error('データ取得エラー:', error);
@@ -51,6 +55,11 @@
         on('btn-set-lost', setLostTeams);
         on('btn-reset', resetDraft);
         on('btn-edit-players', openPlayersModal);
+        on('btn-edit-roulette', openRouletteEditor);
+        on('btn-roulette-add', addRouletteName);
+        on('btn-save-roulette', saveRoulettePool);
+        on('btn-roulette-spin', runRoulette);
+        on('btn-roulette-apply', applyRoulette);
         on('btn-save-players', savePlayers);
         on('btn-edit-teams', openTeamsModal);
         on('btn-add-team', addTeamRow);
@@ -124,6 +133,7 @@
         document.getElementById('current-round').textContent = state.currentRound;
         renderBoard();
         renderConflicts();
+        renderRoulettePending();
         renderHistory();
         renderAdminControls();
         syncSettingsInputs();
@@ -205,6 +215,11 @@
                 playerHtml = D.esc(nom.playerName);
                 playerClass += ' is-tentative';
                 tags.push('<span class="tag tag-tentative">仮</span>');
+            } else if (D.isRouletteWaiting(nom)) {
+                // ルーレット待ち。回すまで誰を獲るか決まっていない
+                playerHtml = '🎰 ルーレット';
+                playerClass += ' is-roulette';
+                tags.push('<span class="tag tag-roulette">抽選待ち</span>');
             } else {
                 playerHtml = D.esc(nom.playerName);
                 if (conflictTeams.has(team.id)) {
@@ -214,6 +229,9 @@
                 const dup = taken.get(D.normalizeName(nom.playerName));
                 if (dup) {
                     tags.push('<span class="tag tag-dup">' + dup.round + '巡目で指名済み</span>');
+                }
+                if (D.isRoulette(nom)) {
+                    tags.push('<span class="tag tag-roulette">🎰 ルーレット獲得</span>');
                 }
                 if (nom.attempts && nom.attempts.length) {
                     tags.push('<span class="tag tag-won">再指名</span>');
@@ -316,6 +334,166 @@
         });
     }
 
+    /* ---------- ルーレット抽選 ---------- */
+
+    // core の関数に渡すための draft 相当のオブジェクト
+    function draftSnapshot() {
+        return {
+            nominations: state.nominations,
+            players: state.players,
+            roulette: state.roulette,
+            settings: {
+                totalRounds: state.settings.totalRounds,
+                hidePicks: state.settings.hidePicks,
+                revealed: state.settings.revealed
+            }
+        };
+    }
+
+    // この巡でまだ回していないルーレット指名
+    function pendingRoulettes() {
+        if (!revealed()) return [];
+        const round = D.roundData(state.nominations, state.currentRound);
+        return currentTeams()
+            .filter(t => D.isRouletteWaiting(round[t.id]))
+            .map(t => ({ team: t, nom: round[t.id] }));
+    }
+
+    function rouletteItems() {
+        return D.rouletteAvailable(draftSnapshot(), state.currentRound);
+    }
+
+    function renderRoulettePending() {
+        const box = document.getElementById('roulette-alert');
+        if (!box) return;
+
+        const pending = pendingRoulettes();
+        if (!pending.length) { box.innerHTML = ''; return; }
+
+        const items = rouletteItems();
+        let html = '<div class="roulette-alert"><h6>🎰 ルーレット待ち</h6>';
+        pending.forEach(entry => {
+            const team = entry.team;
+            const ok = items.length > 0;
+            html += '<div class="roulette-item">' +
+                '<span class="rl-team">' + D.esc(team.name) + '</span>' +
+                '<span class="rl-state">' + (ok ? '出目 ' + items.length + ' 名' : '回せる選手がいません') + '</span>' +
+                '<div class="spacer"></div>' +
+                '<button class="btn2 btn2-gold btn2-sm admin-only no-obs" data-roulette-team="' + D.esc(team.id) + '"' +
+                (ok ? '' : ' disabled') + '>ルーレットを回す</button>' +
+                '</div>';
+        });
+        html += '</div>';
+        box.innerHTML = html;
+
+        box.querySelectorAll('[data-roulette-team]').forEach(btn => {
+            btn.addEventListener('click', () => openRoulette(btn.dataset.rouletteTeam));
+        });
+    }
+
+    function openRoulette(teamId) {
+        const team = currentTeams().find(t => t.id === teamId);
+        if (!team) return;
+
+        const items = rouletteItems();
+        const stage = document.getElementById('roulette-stage');
+        const banner = document.getElementById('roulette-banner');
+        const note = document.getElementById('roulette-note');
+        const spinBtn = document.getElementById('btn-roulette-spin');
+        const applyBtn = document.getElementById('btn-roulette-apply');
+
+        document.getElementById('roulette-team').textContent = team.name;
+        banner.textContent = '';
+        banner.classList.remove('show');
+        stage.classList.remove('is-settled');
+
+        if (!items.length) {
+            stage.innerHTML = '<p class="roulette-empty">回せる選手がいません。<br>ルーレット対象を追加するか、通常の指名に切り替えてください。</p>';
+            note.textContent = '';
+            spinBtn.disabled = true;
+            applyBtn.disabled = true;
+            rouletteCtx = null;
+        } else {
+            // 当選者を先に均等ランダムで決めてから、そこで止まるように回す
+            const winnerIndex = Math.floor(Math.random() * items.length);
+            rouletteCtx = { teamId: team.id, teamName: team.name, items: items, winnerIndex: winnerIndex, done: false };
+            window.Roulette.render(stage, items);
+            note.textContent = items.length + ' 名からランダムに1名を獲得します';
+            spinBtn.disabled = false;
+            spinBtn.textContent = '回す！';
+            applyBtn.disabled = true;
+        }
+
+        new bootstrap.Modal(document.getElementById('rouletteModal')).show();
+    }
+
+    function runRoulette() {
+        if (!rouletteCtx || rouletteCtx.done) return;
+
+        const stage = document.getElementById('roulette-stage');
+        const banner = document.getElementById('roulette-banner');
+        const note = document.getElementById('roulette-note');
+        const spinBtn = document.getElementById('btn-roulette-spin');
+        const sfx = window.Showdown && window.Showdown.sfx;
+
+        if (sfx) { sfx.unlock(); sfx.tense(); }
+        spinBtn.disabled = true;
+        spinBtn.textContent = '回転中…';
+        note.textContent = '';
+
+        window.Roulette.spin(stage, rouletteCtx.items, rouletteCtx.winnerIndex, { sfx: sfx })
+            .then(function () {
+                const name = rouletteCtx.items[rouletteCtx.winnerIndex];
+                rouletteCtx.done = true;
+                rouletteCtx.winner = name;
+
+                window.Roulette.highlight(stage, rouletteCtx.items, rouletteCtx.winnerIndex);
+                banner.textContent = name;
+                banner.classList.add('show');
+                note.textContent = rouletteCtx.teamName + ' が「' + name + '」を獲得';
+                if (sfx) sfx.win();
+                if (window.Showdown) window.Showdown.confetti(stage, 2600);
+
+                spinBtn.textContent = '決定';
+                document.getElementById('btn-roulette-apply').disabled = false;
+            });
+    }
+
+    function applyRoulette() {
+        if (!rouletteCtx || !rouletteCtx.done || !rouletteCtx.winner) return;
+
+        const ctx = rouletteCtx;
+
+        // 回している間に他チームが同じ選手を確定していないか、念のため見直す
+        if (rouletteItems().indexOf(ctx.winner) === -1) {
+            D.toast('「' + ctx.winner + '」は他で確定済みになりました。回し直してください', 'danger', 6000);
+            openRoulette(ctx.teamId);
+            return;
+        }
+
+        const base = 'draft/nominations/round' + state.currentRound + '/' + ctx.teamId;
+        const updates = {};
+        updates[base + '/playerName'] = ctx.winner;
+        updates[base + '/rouletteWon'] = true;
+        updates[base + '/status'] = 'confirmed';
+        updates[base + '/timestamp'] = Date.now();
+        updates['draft/rouletteLog/round' + state.currentRound + '/' + ctx.teamId] = {
+            playerName: ctx.winner,
+            teamId: ctx.teamId,
+            teamName: ctx.teamName,
+            candidates: ctx.items,
+            timestamp: Date.now()
+        };
+
+        db.ref().update(updates)
+            .then(function () {
+                D.toast(ctx.teamName + 'が「' + ctx.winner + '」を獲得しました', 'success', 5000);
+                bootstrap.Modal.getInstance(document.getElementById('rouletteModal')).hide();
+                rouletteCtx = null;
+            })
+            .catch(err => D.toast('エラー: ' + err.message, 'danger'));
+    }
+
     function renderHistory() {
         const container = document.getElementById('history-container');
 
@@ -350,7 +528,10 @@
                     round: r,
                     team,
                     player: nom.playerName,
-                    status: D.isTentative(nom) ? 'tentative' : (pending ? 'contested' : nom.status)
+                    roulette: D.isRoulette(nom),
+                    status: D.isTentative(nom) ? 'tentative'
+                        : D.isRouletteWaiting(nom) ? 'roulette_wait'
+                            : (pending ? 'contested' : nom.status)
                 });
             });
         }
@@ -365,14 +546,17 @@
             const lost = row.status === 'lost_lottery';
             const contested = row.status === 'contested';
             const tentative = row.status === 'tentative';
+            const rlWait = row.status === 'roulette_wait';
             body += '<tr>' +
                 '<td class="round-cell">' + row.round + '巡目</td>' +
                 '<td class="team-cell">' + D.avatarHtml(row.team, 'is-inline') + D.esc(row.team.name) + '</td>' +
                 '<td class="player-cell">' + (lost ? '<s>' + D.esc(row.player) + '</s>' : D.esc(row.player)) + '</td>' +
                 '<td>' + (lost ? '<span class="tag tag-lost">抽選負け</span>'
                     : tentative ? '<span class="tag tag-tentative">仮</span>'
-                        : contested ? '<span class="tag tag-conflict">重複 — 抽選待ち</span>'
-                            : '<span class="tag tag-won">確定</span>') + '</td>' +
+                        : rlWait ? '<span class="tag tag-roulette">🎰 ルーレット待ち</span>'
+                            : contested ? '<span class="tag tag-conflict">重複 — 抽選待ち</span>'
+                                : row.roulette ? '<span class="tag tag-roulette">🎰 ルーレット獲得</span>'
+                                    : '<span class="tag tag-won">確定</span>') + '</td>' +
                 '</tr>';
         });
 
@@ -426,7 +610,8 @@
         const round = D.roundData(state.nominations, state.currentRound);
         return {
             pending: teams.filter(t => !D.isActive(round[t.id])),
-            conflicts: D.findConflicts(state.nominations, state.currentRound)
+            conflicts: D.findConflicts(state.nominations, state.currentRound),
+            roulettes: teams.filter(t => D.isRouletteWaiting(round[t.id]))
         };
     }
 
@@ -441,13 +626,17 @@
             parts.push('抽選待ち ' + b.conflicts.length + '件（' +
                 b.conflicts.map(c => c.name).join('・') + '）');
         }
+        if (b.roulettes.length) {
+            parts.push('ルーレット待ち ' + b.roulettes.length + 'チーム（' +
+                b.roulettes.map(t => t.name).join('・') + '）');
+        }
         return parts.join(' / ');
     }
 
     // 次の巡へ進める状態か
     function canAdvance() {
         const b = roundBlockers();
-        return !b.pending.length && !b.conflicts.length;
+        return !b.pending.length && !b.conflicts.length && !b.roulettes.length;
     }
 
     // 次へボタンの状態を更新する
@@ -1190,6 +1379,87 @@
     // Firebase のキーに使えない文字を置換
     function safeKey(key) {
         return String(key).replace(/[.#$/[\]]/g, '_').slice(0, 60) || 'player';
+    }
+
+    /* ---------- ルーレット対象の編集 ---------- */
+
+    function openRouletteEditor() {
+        rouletteDraft = D.roulettePool({ roulette: state.roulette }).slice();
+        renderRouletteEditor();
+        new bootstrap.Modal(document.getElementById('rouletteEditModal')).show();
+    }
+
+    function renderRouletteEditor() {
+        const box = document.getElementById('roulette-chips');
+        const count = document.getElementById('roulette-count');
+        const addBtn = document.getElementById('btn-roulette-add');
+        const input = document.getElementById('roulette-add-input');
+
+        const max = D.ROULETTE_MAX;
+        count.textContent = rouletteDraft.length + ' / ' + max + ' 名';
+
+        const full = rouletteDraft.length >= max;
+        addBtn.disabled = full;
+        input.disabled = full;
+        input.placeholder = full ? '上限' + max + '名に達しています' : '選手名を入力して追加';
+
+        if (!rouletteDraft.length) {
+            box.innerHTML = '<p class="pool-empty">まだ登録がありません。ルーレットに載せる選手を追加してください。</p>';
+            return;
+        }
+
+        const colors = window.Roulette ? window.Roulette.SEG_COLORS : ['#1ed760'];
+        const taken = D.takenPlayers(state.nominations, state.settings.totalRounds);
+        box.innerHTML = '';
+
+        rouletteDraft.forEach(function (name, i) {
+            const out = taken.has(D.normalizeName(name));
+            const chip = document.createElement('span');
+            chip.className = 'rl-chip' + (out ? ' is-out' : '');
+            chip.innerHTML =
+                '<span class="rl-swatch" style="background:' + colors[i % colors.length] + '"></span>' +
+                '<span>' + D.esc(name) + '</span>';
+
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'chip-remove';
+            del.textContent = '✕';
+            del.title = '削除';
+            del.addEventListener('click', function () {
+                rouletteDraft.splice(i, 1);
+                renderRouletteEditor();
+            });
+            chip.appendChild(del);
+            box.appendChild(chip);
+        });
+    }
+
+    function addRouletteName() {
+        const input = document.getElementById('roulette-add-input');
+        const name = input.value.trim();
+        if (!name) return;
+        if (rouletteDraft.length >= D.ROULETTE_MAX) {
+            D.toast('ルーレットは最大' + D.ROULETTE_MAX + '名までです', 'danger');
+            return;
+        }
+        const key = D.normalizeName(name);
+        if (rouletteDraft.some(n => D.normalizeName(n) === key)) {
+            D.toast('「' + name + '」は既に登録されています', 'danger');
+            return;
+        }
+        rouletteDraft.push(name);
+        input.value = '';
+        renderRouletteEditor();
+    }
+
+    function saveRoulettePool() {
+        const value = rouletteDraft.slice(0, D.ROULETTE_MAX).join(String.fromCharCode(10));
+        db.ref('draft/roulette').set(value)
+            .then(function () {
+                D.toast('ルーレット対象を保存しました（' + rouletteDraft.length + '名）', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('rouletteEditModal')).hide();
+            })
+            .catch(err => D.toast('エラー: ' + err.message, 'danger'));
     }
 
     /* ---------- 選手一覧 ---------- */

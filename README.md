@@ -49,6 +49,14 @@ Firebase Realtime Database を使って、メインボードと各チームの�
 
   > 勝者は先に完全ランダム（各チーム 1/N）で決めたうえで、その勝者が勝つ配牌を探しています。
   > 演出のために勝敗を操作してはおらず、勝率は均等、画面に出る役と勝者も常に一致します。
+- **ルーレット抽選** — 指名の代わりに「ルーレット」を選べます。ポーカー抽選とは別枠で、
+  管理パネルに登録したルーレット対象（最大10名）から1名がランダムに決まります。
+  盤が止まったところの選手をそのまま獲得。複数チームが同じ巡でルーレットを選んだ場合は
+  順番に回し、既に出た選手は盤から外れるので同じ選手が重複することはありません。
+
+  > 当選者を先に均等ランダムで決めてから、そこで止まるように盤を回しています。
+  > 画面に出る出目と結果は常に一致します。
+
 - **再指名不可チェック** — 過去の巡で確定済みの選手が再度指名されると「◯巡目で指名済み」と警告。
 - **伏せモード / 一斉公開** — 全チームが送信するまで指名を伏せ、任意のタイミングで一斉公開できます（既定はオフ）。
 - **監督（チーム）の管理** — 管理パネルから監督の追加・改名・削除・並べ替えができます。並び順がそのまま指名順（前節上位から）になり、偶数巡は自動で逆順に。各行の 🔗 で、その監督に渡す指名シートのURLをコピーできます。
@@ -81,11 +89,17 @@ draft/
     hidePicks: false
     revealed/ { round1: true }
   players: "選手A\n選手B\n..."   # 候補選手リスト（1行1名）
+  roulette: "助っ人A\n助っ人B\n..."   # ルーレット対象（最大10名）
+  rouletteLog/
+    round1/
+      team1/ { playerName, teamId, teamName, candidates, timestamp }
   lottery/
     round1/ { <選手キー>: { playerName, winnerTeamId, winnerTeamName, loserTeamNames, timestamp } }
 ```
 
 `status` は `confirmed`（確定）または `lost_lottery`（抽選負け）。
+ルーレット指名は `roulette: true` が付き、回すまでは `playerName` が `"ルーレット"` のまま、
+当選後に `rouletteWon: true` と実際の選手名に書き換わります。
 `attempts` には抽選に負けた過去の指名が入り、履歴に残ります。
 
 既存データとの互換性を保つため、`settings` / `players` / `lottery` は存在しなくても既定値で動作します。
@@ -102,6 +116,7 @@ draft-results.html    結果一覧
 css/style.css         全画面共通のスタイル
 js/core.js            Firebase 初期化・共通ロジック（重複検出、順序計算、練習モード等）
 js/showdown.js        抽選のポーカー勝負（配牌・役判定・逆転制御）
+js/roulette.js        ルーレット抽選の盤面と回転演出
 js/main.js            メインボード
 js/team-sheet.js      指名シート
 js/draft-results.js   結果一覧
