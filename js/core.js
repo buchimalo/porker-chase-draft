@@ -595,29 +595,18 @@
         return ('0' + n).slice(-2);
     }
 
-    function stamp(date) {
-        const d = date || new Date();
-        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
-            ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-    }
-
     function fileStamp(date) {
         const d = date || new Date();
         return String(d.getFullYear()) + pad2(d.getMonth() + 1) + pad2(d.getDate()) +
             '-' + pad2(d.getHours()) + pad2(d.getMinutes());
     }
 
-    function rule(char) {
-        return new Array(49).join(char || '=');
-    }
-
     // 1件の指名を「選手名（補足）」の形にする
     function pickText(nom) {
-        if (!nom || !nom.playerName) return '(未指名)';
+        if (!nom || !nom.playerName) return '—';
         if (isRouletteWaiting(nom)) return nom.playerName + '（抽選待ち）';
         if (isLost(nom)) return nom.playerName + '（抽選負け）';
         if (isTentative(nom)) return nom.playerName + '（仮）';
-        if (nom.rouletteSlot) return nom.playerName + '（' + nom.rouletteSlot + ' で獲得）';
         return nom.playerName;
     }
 
@@ -633,97 +622,13 @@
         const rounds = settings.totalRounds;
         const lines = [];
 
-        let done = 0;
-        for (let r = 1; r <= rounds; r++) {
-            const round = roundData(noms, r);
-            teams.forEach(t => { if (isActive(round[t.id]) && !isRouletteWaiting(round[t.id])) done++; });
-        }
-
-        lines.push('ポカチェ ドラフト会議 — ドラフト結果');
-        lines.push('出力日時: ' + stamp());
-        lines.push('全' + rounds + '巡 / ' + teams.length + 'チーム / 指名確定 ' + done + ' 件');
-        lines.push('');
-
-        /* ---- チーム別 ---- */
-        lines.push(rule('='));
-        lines.push('チーム別');
-        lines.push(rule('='));
-        lines.push('');
-
         teams.forEach(team => {
-            lines.push('■ ' + team.name);
+            lines.push(team.name);
             for (let r = 1; r <= rounds; r++) {
-                const nom = roundData(noms, r)[team.id];
-                lines.push('   ' + r + '巡目\t' + pickText(nom));
+                lines.push(r + '巡  ' + pickText(roundData(noms, r)[team.id]));
             }
             lines.push('');
         });
-
-        /* ---- 巡目別（指名順） ---- */
-        lines.push(rule('='));
-        lines.push('巡目別（指名順）');
-        lines.push(rule('='));
-        lines.push('');
-
-        for (let r = 1; r <= rounds; r++) {
-            const round = roundData(noms, r);
-            const ordered = orderedTeams(teams, r);
-            lines.push('【第' + r + '巡目】');
-            ordered.forEach((team, i) => {
-                lines.push('   ' + (i + 1) + '. ' + team.name + '\t' + pickText(round[team.id]));
-            });
-            lines.push('');
-        }
-
-        /* ---- 抽選の記録 ---- */
-        const lotteryRows = [];
-        Object.entries(data.lottery || {}).forEach(([roundKey, records]) => {
-            if (!records) return;
-            const r = parseInt(String(roundKey).replace('round', ''), 10) || 0;
-            Object.values(records).forEach(rec => {
-                if (rec && rec.playerName) lotteryRows.push({ round: r, rec });
-            });
-        });
-        lotteryRows.sort((a, b) => a.round - b.round);
-
-        if (lotteryRows.length) {
-            lines.push(rule('='));
-            lines.push('ポーカー抽選の記録');
-            lines.push(rule('='));
-            lines.push('');
-            lotteryRows.forEach(({ round, rec }) => {
-                const losers = Array.isArray(rec.loserTeamNames) ? rec.loserTeamNames : [];
-                lines.push('第' + round + '巡目  ' + rec.playerName);
-                lines.push('   獲得      ' + (rec.winnerTeamName || ''));
-                if (losers.length) lines.push('   抽選負け  ' + losers.join(' / '));
-                lines.push('');
-            });
-        }
-
-        /* ---- ルーレットの記録 ---- */
-        const rlRows = [];
-        Object.entries(data.rouletteLog || {}).forEach(([roundKey, records]) => {
-            if (!records) return;
-            const r = parseInt(String(roundKey).replace('round', ''), 10) || 0;
-            Object.values(records).forEach(rec => {
-                if (rec && rec.playerName) rlRows.push({ round: r, rec });
-            });
-        });
-        rlRows.sort((a, b) => a.round - b.round);
-
-        if (rlRows.length) {
-            lines.push(rule('='));
-            lines.push('ルーレットの記録');
-            lines.push(rule('='));
-            lines.push('');
-            rlRows.forEach(({ round, rec }) => {
-                const cand = Array.isArray(rec.candidates) ? rec.candidates : [];
-                lines.push('第' + round + '巡目  ' + (rec.slot || ROULETTE_LABEL));
-                lines.push('   獲得      ' + (rec.teamName || '') + ' → ' + rec.playerName);
-                if (cand.length) lines.push('   出目      ' + cand.join(' / '));
-                lines.push('');
-            });
-        }
 
         return lines.join(CRLF);
     }
