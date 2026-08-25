@@ -17,6 +17,7 @@
 
     const params = new URLSearchParams(global.location.search);
     const DEMO = params.get('demo') === '1';
+    const ADMIN_KEY = 'pcd.admin';
 
     let db;
     if (DEMO) {
@@ -192,9 +193,29 @@
         return params.get(key);
     }
 
+    // 管理者かどうか。?admin=1 で有効化し、その端末に記憶する。
+    // ?admin=0 で解除。観戦/配信モードと練習モードは常に固定。
+    var ADMIN = (function () {
+        if (params.get('view') === '1' || params.get('obs') === '1') return false;
+        if (DEMO) return true;
+        var flag = params.get('admin');
+        try {
+            if (flag === '1') { localStorage.setItem(ADMIN_KEY, '1'); return true; }
+            if (flag === '0') { localStorage.removeItem(ADMIN_KEY); return false; }
+            return localStorage.getItem(ADMIN_KEY) === '1';
+        } catch (e) {
+            return flag === '1';
+        }
+    })();
+
+    function isAdmin() {
+        return ADMIN;
+    }
+
     function applyDisplayModes() {
         if (param('obs') === '1') document.body.classList.add('obs-mode');
         if (param('view') === '1') document.body.classList.add('view-mode');
+        if (!ADMIN) document.body.classList.add('guest-mode');
         if (DEMO) {
             const banner = document.createElement('div');
             banner.className = 'demo-banner no-obs';
@@ -506,6 +527,7 @@
         renderResultsMatrix,
         toast,
         param,
+        isAdmin,
         applyDisplayModes
     };
 })(window);

@@ -94,6 +94,7 @@
 
         // キーボードショートカット（配信オペ用）
         document.addEventListener('keydown', e => {
+            if (!D.isAdmin()) return;
             if (e.target.matches('input, textarea')) return;
             if (e.key === 'ArrowLeft') changeRound(-1);
             if (e.key === 'ArrowRight') changeRound(1);
