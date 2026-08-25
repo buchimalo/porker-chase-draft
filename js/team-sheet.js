@@ -173,7 +173,9 @@
             box.classList.add('state-redo');
             icon.textContent = '!';
             title.textContent = '抽選負け — 再指名してください';
-            detail.textContent = '「' + nom.playerName + '」は他チームが獲得しました。別の選手を指名してください。';
+            detail.textContent = D.isRoulette(nom)
+                ? 'ルーレットが他チームと重複し、抽選に負けました。選手を指名してください。'
+                : '「' + nom.playerName + '」は他チームが獲得しました。別の選手を指名してください。';
             submitBtn.textContent = '確定して送信';
             note.textContent = '「仮で出す」で様子を見てから確定できます。';
 
@@ -391,15 +393,18 @@
 
         const items = rouletteItems();
         const nom = myNomination();
-        const locked = D.isActive(nom) || D.isRouletteWaiting(nom);
+        const lostRoulette = D.isRoulette(nom) && D.isLost(nom);
+        const locked = D.isActive(nom) || D.isRouletteWaiting(nom) || lostRoulette;
 
         if (!items.length) { block.classList.add('hide'); return; }
         block.classList.remove('hide');
 
         btn.disabled = locked;
-        note.textContent = locked
-            ? 'この巡の指名は送信済みです。'
-            : '現在の出目：' + items.join('・') + '（' + items.length + '名）';
+        note.textContent = lostRoulette
+            ? 'ルーレットの抽選に負けたため、この巡は選手を指名してください。'
+            : locked
+                ? 'この巡の指名は送信済みです。'
+                : '現在の出目：' + items.join('・') + '（' + items.length + '名）';
     }
 
     // ルーレット指名の確認モーダルを出す
@@ -407,6 +412,10 @@
         const nom = myNomination();
         if (D.isActive(nom) || D.isRouletteWaiting(nom)) {
             D.toast('送信済みのため変更できません', 'danger');
+            return;
+        }
+        if (D.isRoulette(nom) && D.isLost(nom)) {
+            D.toast('ルーレットの抽選に負けたため、選手を指名してください', 'danger', 5000);
             return;
         }
         const items = rouletteItems();

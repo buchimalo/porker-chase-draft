@@ -219,7 +219,13 @@
                 // ルーレット待ち。回すまで誰を獲るか決まっていない
                 playerHtml = '🎰 ルーレット';
                 playerClass += ' is-roulette';
-                tags.push('<span class="tag tag-roulette">抽選待ち</span>');
+                if (conflictTeams.has(team.id)) {
+                    // 他チームもルーレットを選んだ場合はポーカー抽選で決める
+                    card.classList.add('is-conflict');
+                    tags.push('<span class="tag tag-conflict">重複 → ポーカー抽選</span>');
+                } else {
+                    tags.push('<span class="tag tag-roulette">回転待ち</span>');
+                }
             } else {
                 playerHtml = D.esc(nom.playerName);
                 if (conflictTeams.has(team.id)) {
@@ -321,7 +327,7 @@
         let html = '<div class="conflict-alert"><h6>指名が重複しています — 抽選が必要です</h6>';
         conflicts.forEach(c => {
             html += '<div class="conflict-item">' +
-                '<span class="conflict-player">' + D.esc(c.name) + '</span>' +
+                '<span class="conflict-player">' + (D.normalizeName(c.name) === D.normalizeName(D.ROULETTE_LABEL) ? '🎰 ' : '') + D.esc(c.name) + '</span>' +
                 '<span class="conflict-teams">' + c.teamIds.map(id => D.esc(nameOf(id))).join(' / ') + '</span>' +
                 '<button class="btn2 btn2-gold btn2-sm admin-only no-obs" data-lottery-key="' + D.esc(c.key) + '">抽選する</button>' +
                 '</div>';
@@ -354,8 +360,15 @@
     function pendingRoulettes() {
         if (!revealed()) return [];
         const round = D.roundData(state.nominations, state.currentRound);
+
+        // ルーレットが複数チームで被っている間は、先にポーカー抽選で1チームに絞る
+        const contested = new Set();
+        D.findConflicts(state.nominations, state.currentRound).forEach(c => {
+            c.teamIds.forEach(id => contested.add(id));
+        });
+
         return currentTeams()
-            .filter(t => D.isRouletteWaiting(round[t.id]))
+            .filter(t => D.isRouletteWaiting(round[t.id]) && !contested.has(t.id))
             .map(t => ({ team: t, nom: round[t.id] }));
     }
 
@@ -519,7 +532,11 @@
 
                 // 抽選負けで再指名した履歴も表示する
                 (nom.attempts || []).forEach(att => {
-                    rows.push({ round: r, team, player: att.playerName, status: 'lost_lottery' });
+                    rows.push({
+                        round: r, team,
+                        player: att.roulette ? '🎰 ' + att.playerName : att.playerName,
+                        status: 'lost_lottery'
+                    });
                 });
 
                 const pending = nom.status !== 'lost_lottery' && !D.isTentative(nom) &&
@@ -530,8 +547,9 @@
                     player: nom.playerName,
                     roulette: D.isRoulette(nom),
                     status: D.isTentative(nom) ? 'tentative'
-                        : D.isRouletteWaiting(nom) ? 'roulette_wait'
-                            : (pending ? 'contested' : nom.status)
+                        : pending ? 'contested'
+                            : D.isRouletteWaiting(nom) ? 'roulette_wait'
+                                : nom.status
                 });
             });
         }
@@ -611,7 +629,8 @@
         return {
             pending: teams.filter(t => !D.isActive(round[t.id])),
             conflicts: D.findConflicts(state.nominations, state.currentRound),
-            roulettes: teams.filter(t => D.isRouletteWaiting(round[t.id]))
+            // 重複中は「抽選待ち」で既に数えているので、回転待ちは重複解消後だけ
+            roulettes: pendingRoulettes().map(entry => entry.team)
         };
     }
 
@@ -1060,12 +1079,14 @@
             winner: null
         };
 
-        document.getElementById('lottery-player').textContent = target.name;
+        const isRl = D.normalizeName(target.name) === D.normalizeName(D.ROULETTE_LABEL);
+        document.getElementById('lottery-player').textContent = (isRl ? '🎰 ' : '') + target.name;
         document.getElementById('showdown').innerHTML = '';
         document.getElementById('showdown-banner').className = 'showdown-banner';
         document.getElementById('showdown-banner').textContent = '';
         document.getElementById('lottery-note').textContent =
-            lotteryCtx.teams.map(t => t.name).join(' / ') + ' の ' + lotteryCtx.teams.length + 'チームでポーカー勝負';
+            lotteryCtx.teams.map(t => t.name).join(' / ') + ' の ' + lotteryCtx.teams.length + 'チームでポーカー勝負' +
+            (isRl ? '（勝った1チームだけがルーレットを回せます）' : '');
         document.getElementById('btn-spin').disabled = false;
         document.getElementById('btn-apply-lottery').disabled = true;
 

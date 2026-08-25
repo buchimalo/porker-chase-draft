@@ -302,7 +302,8 @@
         const buckets = {};
 
         Object.entries(data).forEach(([teamId, nom]) => {
-            if (!isActive(nom) || isRouletteWaiting(nom)) return;
+            // ルーレット同士も「重複」として扱う（ポーカー抽選で決める）
+            if (!isActive(nom)) return;
             const key = normalizeName(nom.playerName);
             if (!key) return;
             if (!buckets[key]) buckets[key] = { name: nom.playerName, key, teamIds: [] };
