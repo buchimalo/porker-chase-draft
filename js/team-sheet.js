@@ -259,7 +259,10 @@
         const available = pool.filter(name => !taken.has(D.normalizeName(name)));
         count.textContent = '残り ' + available.length + ' / ' + pool.length + ' 名';
 
-        const shown = pool.filter(name => !poolFilter || D.normalizeName(name).indexOf(poolFilter) !== -1);
+        const matched = pool.filter(name => !poolFilter || D.normalizeName(name).indexOf(poolFilter) !== -1);
+        // 指名済みは末尾にまとめる（選べる選手を先に見せる）
+        const shown = matched.filter(n => !taken.has(D.normalizeName(n)))
+            .concat(matched.filter(n => taken.has(D.normalizeName(n))));
         box.innerHTML = '';
 
         if (!shown.length) {

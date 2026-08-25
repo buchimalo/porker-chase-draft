@@ -570,13 +570,17 @@
         }
 
         let body = '';
+        let lastRound = null;
         rows.forEach(row => {
+            // 同じ巡が続く間は巡目の表記を省いて、区切り線でまとめる
+            const first = row.round !== lastRound;
+            lastRound = row.round;
             const lost = row.status === 'lost_lottery';
             const contested = row.status === 'contested';
             const tentative = row.status === 'tentative';
             const rlWait = row.status === 'roulette_wait';
-            body += '<tr>' +
-                '<td class="round-cell">' + row.round + '巡目</td>' +
+            body += '<tr' + (first ? ' class="is-round-start"' : '') + '>' +
+                '<td class="round-cell' + (first ? '' : ' is-repeat') + '">' + row.round + '巡目</td>' +
                 '<td class="team-cell">' + D.avatarHtml(row.team, 'is-inline') + D.esc(row.team.name) + '</td>' +
                 '<td class="player-cell">' + (lost ? '<s>' + D.esc(row.player) + '</s>' : D.esc(row.player)) + '</td>' +
                 '<td>' + (lost ? '<span class="tag tag-lost">抽選負け</span>'

@@ -2378,3 +2378,179 @@ body.guest-mode .admin-only {
 .pool-chip.is-roulette-slot.selected {
     color: var(--on-accent);
 }
+
+/* ============================================================
+   仕上げ
+   ============================================================ */
+
+/* スクロールバーを暗い配色に合わせる（既定の明るいバーが浮いていた） */
+html {
+    scrollbar-color: var(--line-bright) var(--void);
+    scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--void);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border: 3px solid var(--void);
+    border-radius: var(--r-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--line-bright);
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--void);
+}
+
+/* 選択範囲 */
+::selection {
+    background: rgba(30, 215, 96, .28);
+    color: var(--paper);
+}
+
+/* 桁数が変わっても数字がガタつかないようにする */
+.round-badge .num,
+.progress-label,
+.ps-value,
+.pick-order,
+.rnd,
+table.tbl .round-cell,
+#players-count,
+#roulette-count,
+#pool-count,
+#player-list-count {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
+/* 未指名のカードも高さと重さを揃える */
+.pick-player.is-empty {
+    color: var(--line-bright);
+    font-weight: 500;
+}
+
+/* モーダルヘッダーのボタンは背景が近すぎて沈むので一段持ち上げる */
+.modal-header .btn2 {
+    background: var(--raised);
+}
+
+.modal-header .btn2:hover:not(:disabled) {
+    background: var(--line-strong);
+}
+
+/* 指名履歴 — 巡目ごとにまとめて見せる */
+table.tbl tbody tr.is-round-start td {
+    border-top: 1px solid var(--line-strong);
+}
+
+table.tbl tbody tr.is-round-start:first-child td {
+    border-top: none;
+}
+
+table.tbl .round-cell.is-repeat {
+    color: transparent;
+}
+
+table.tbl tbody tr:hover .round-cell.is-repeat {
+    color: var(--line-bright);
+}
+
+/* 練習モードの帯 — 明るすぎたので落ち着かせる */
+.demo-banner {
+    background: rgba(30, 215, 96, .12);
+    color: var(--accent);
+    border-bottom: 1px solid rgba(30, 215, 96, .28);
+}
+
+.demo-banner button {
+    border-color: rgba(30, 215, 96, .45);
+    color: var(--accent);
+}
+
+.demo-banner button:hover {
+    background: rgba(30, 215, 96, .16);
+}
+
+/* 進捗バーの動きを少しなめらかに */
+.progress-fill {
+    transition: width .45s cubic-bezier(.22, .61, .36, 1);
+}
+
+/* 指名中・重複のカードは左のラインを少し太くして、地を淡く色づける */
+.pick-card.is-turn::before,
+.pick-card.is-conflict::before {
+    width: 3px;
+}
+
+.pick-card.is-conflict {
+    background: rgba(255, 143, 163, .05);
+}
+
+.pick-card.is-conflict:hover {
+    background: rgba(255, 143, 163, .08);
+}
+
+/* 印刷時は装飾を落とす */
+@media print {
+
+    .demo-banner,
+    .topbar-actions,
+    .seg {
+        display: none !important;
+    }
+}
+
+/* 指名済みチップは「済」だけに省略して幅を詰める（一覧が読みやすくなる） */
+.pool-chip.taken .by {
+    display: none;
+}
+
+.pool-chip.taken::after {
+    content: "済";
+    margin-left: 6px;
+    font-size: 11px;
+    opacity: .8;
+}
+
+@media (max-width: 720px) {
+
+    /* スマホでは操作ボタンを右寄せの小さめに戻す（横幅いっぱいに伸びていた） */
+    .topbar-actions {
+        width: auto;
+        justify-content: flex-end;
+    }
+
+    .topbar-actions .btn2 {
+        flex: 0 0 auto;
+    }
+
+    /* 候補リストは画面の高さに合わせて広く使う */
+    .pool {
+        max-height: 46vh;
+    }
+
+    .pool-chip {
+        height: 36px;
+        font-size: 14px;
+    }
+
+    /* 送信ボタンは押しやすく */
+    .submit-row .btn2-lg {
+        height: 46px;
+    }
+
+    .demo-banner {
+        font-size: 11px;
+        text-align: center;
+    }
+}
