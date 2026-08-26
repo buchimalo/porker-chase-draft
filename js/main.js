@@ -1585,21 +1585,22 @@
         }
 
         box.innerHTML = shown.map(e => {
+            const rl = D.isRouletteName(e.name) ? ' is-roulette-slot' : '';
             if (e.state === 'taken') {
                 const color = D.teamColor(e.info.teamId);
-                return '<div class="pl-item is-taken" style="--team-color:' + color + '">' +
+                return '<div class="pl-item is-taken' + rl + '" style="--team-color:' + color + '">' +
                     '<span class="pl-name"><s>' + D.esc(e.name) + '</s></span>' +
                     '<span class="pl-meta">' + e.info.round + '巡目 · ' + D.esc(nameOf(e.info.teamId)) + '</span>' +
                     '</div>';
             }
             if (e.state === 'contested') {
-                return '<div class="pl-item is-contested">' +
+                return '<div class="pl-item is-contested' + rl + '">' +
                     '<span class="pl-name">' + D.esc(e.name) + '</span>' +
                     '<span class="pl-meta">抽選待ち · ' +
                     e.info.teamIds.map(id => D.esc(nameOf(id))).join(' / ') + '</span>' +
                     '</div>';
             }
-            return '<div class="pl-item"><span class="pl-name">' + D.esc(e.name) + '</span>' +
+            return '<div class="pl-item' + rl + '"><span class="pl-name">' + D.esc(e.name) + '</span>' +
                 '<span class="pl-meta">未指名</span></div>';
         }).join('');
     }

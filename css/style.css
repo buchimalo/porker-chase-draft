@@ -2370,13 +2370,23 @@ body.guest-mode .admin-only {
 
 /* 候補リスト内のルーレット枠 */
 .pool-chip.is-roulette-slot {
-    border-color: var(--accent);
+    border: 1px solid var(--accent);
     color: var(--accent);
     font-weight: 700;
 }
 
 .pool-chip.is-roulette-slot.selected {
     color: var(--on-accent);
+}
+
+.pl-item.is-roulette-slot {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.pl-item.is-roulette-slot .pl-name {
+    color: var(--accent);
+    font-weight: 600;
 }
 
 /* ============================================================

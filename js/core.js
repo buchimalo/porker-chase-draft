@@ -403,9 +403,22 @@
         return out;
     }
 
-    // 登録選手を50音順に並べる
+    // ルーレット枠の番号（①→0, ②→1 …）。枠でなければ ROULETTE_MAX
+    function rouletteSlotIndex(name) {
+        const key = normalizeName(name);
+        for (let i = 0; i < ROULETTE_MAX; i++) {
+            if (normalizeName(rouletteSlotName(i)) === key) return i;
+        }
+        return ROULETTE_MAX;
+    }
+
+    // 登録選手を50音順に並べる。ルーレット枠は選手ではないので末尾に番号順でまとめる
     function sortPlayers(list) {
-        return list.slice().sort((a, b) => kanaKey(a).localeCompare(kanaKey(b), 'ja'));
+        const names = list.filter(name => !isRouletteName(name))
+            .sort((a, b) => kanaKey(a).localeCompare(kanaKey(b), 'ja'));
+        const slots = list.filter(name => isRouletteName(name))
+            .sort((a, b) => rouletteSlotIndex(a) - rouletteSlotIndex(b));
+        return names.concat(slots);
     }
 
     // 選手プール（textarea 保存形式）を配列に。表示は常に50音順
@@ -713,6 +726,7 @@
         ROULETTE_LABEL,
         ROULETTE_MAX,
         rouletteSlotName,
+        rouletteSlotIndex,
         isRouletteName,
         renderResultsGrid,
         renderResultsMatrix,

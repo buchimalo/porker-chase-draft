@@ -263,14 +263,8 @@
 
     // ルーレット枠を番号順に並べる（リストの並び順に依存しないように）
     function rouletteSlots(pool) {
-        const slotIndex = name => {
-            const key = D.normalizeName(name);
-            for (let i = 0; i < D.ROULETTE_MAX; i++) {
-                if (D.normalizeName(D.rouletteSlotName(i)) === key) return i;
-            }
-            return D.ROULETTE_MAX;
-        };
-        return pool.filter(D.isRouletteName).sort((a, b) => slotIndex(a) - slotIndex(b));
+        return pool.filter(D.isRouletteName)
+            .sort((a, b) => D.rouletteSlotIndex(a) - D.rouletteSlotIndex(b));
     }
 
     // ロック判定に使う情報をまとめて作る
@@ -341,21 +335,23 @@
         shown.forEach(name => {
             const key = D.normalizeName(name);
             const locked = lockReason(name, ctx);
+            const rl = D.isRouletteName(name);
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'pool-chip';
+            // ルーレット枠は選べる／選べないに関わらず枠線で見分けられるようにする
+            if (rl) btn.classList.add('is-roulette-slot');
 
             if (locked) {
                 btn.classList.add('taken');
                 if (locked.later) btn.classList.add('is-slot-later');
                 btn.disabled = true;
                 btn.title = locked.text;
-                btn.innerHTML = D.esc(name) + '<span class="by">' + D.esc(locked.text) + '</span>';
+                btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
+                    '<span class="by">' + D.esc(locked.text) + '</span>';
             } else {
                 if (key === current) btn.classList.add('selected');
                 const rival = ctx.others.get(key) && ctx.others.get(key).name;
-                const rl = D.isRouletteName(name);
-                if (rl) btn.classList.add('is-roulette-slot');
                 btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
                     (rival ? '<span class="by">⚔ ' + D.esc(rival) + '</span>' : '');
                 btn.addEventListener('click', () => {
