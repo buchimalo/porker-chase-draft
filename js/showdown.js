@@ -968,15 +968,35 @@
     }
 
     // 端末は、ユーザー操作の中で一度鳴らしていない音源の再生を拒否する。
-    // 音量を落として一瞬だけ鳴らし、すぐ戻すことで許可を取っておく
+    // 一瞬だけ鳴らして許可を取っておくが、iOS は volume を無視するため
+    // muted にしないと音が漏れる。play() は「再生が始まってから」解決するので、
+    // volume だけでは間に合わない
     function primeElement(el) {
         if (!el || !el.paused) return;
         const volume = el.volume;
+        let restored = false;
+        const restore = () => {
+            if (restored) return;
+            restored = true;
+            el.muted = false;
+            el.volume = volume;
+        };
+        const done = () => {
+            el.pause();
+            try { el.currentTime = 0; } catch (e) { /* 無視 */ }
+            restore();
+        };
+
+        el.muted = true;
         el.volume = 0;
-        const done = () => { el.pause(); el.currentTime = 0; el.volume = volume; };
+
+        // 音声出力がない環境などでは play() の Promise が解決しないことがある。
+        // 放っておくと消音のまま戻らず本番が無音になるので、必ず元へ戻す
+        setTimeout(done, 1000);
+
         let played = null;
-        try { played = el.play(); } catch (e) { el.volume = volume; return; }
-        if (played && played.then) played.then(done).catch(() => { el.volume = volume; });
+        try { played = el.play(); } catch (e) { restore(); return; }
+        if (played && played.then) played.then(done).catch(restore);
         else done();
     }
 

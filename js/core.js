@@ -580,6 +580,16 @@
         if (inst) inst.hide();
     }
 
+    // 進行役が終わった抽選を消し損ねる（タブを閉じた・通信が切れた等）と、
+    // あとからページを開いた人がその配牌をいきなり再生してしまう。
+    // 送信時刻から離れているものは、途中参加ではなく置き土産とみなして無視する。
+    const LIVE_FRESH_MS = 90 * 1000;
+
+    function isStale(live) {
+        if (!live || typeof live.at !== 'number') return false;   // 旧データは従来どおり
+        return Date.now() - live.at > LIVE_FRESH_MS;
+    }
+
     function watchLiveShowdown() {
         const modalEl = document.getElementById('lotteryModal');
         if (!modalEl || !global.Showdown) return;
@@ -594,6 +604,7 @@
                 if (global.Showdown.sfx.drumrollAbort) global.Showdown.sfx.drumrollAbort();
                 return;
             }
+            if (isStale(live)) { lastId = live.id; return; }
             if (live.id === lastId || playing) return;
             lastId = live.id;
             playing = true;
@@ -626,6 +637,7 @@
                 hideModal(modalEl);
                 return;
             }
+            if (isStale(live)) { lastId = live.id; return; }
             if (live.id === lastId || playing) return;
             lastId = live.id;
             playing = true;

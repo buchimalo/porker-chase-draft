@@ -1180,10 +1180,18 @@
      * draft を丸ごと購読しているため。中に入れると、指名が1つ入るたびに
      * 配牌まで全員へ再送されてしまう。
      */
+    // 進行役のタブが落ちても置き土産が残らないよう、切断時の削除を予約しておく
+    function armLiveCleanup(ref) {
+        if (!ref.onDisconnect) return;   // 練習モードのモック DB にはない
+        try { ref.onDisconnect().remove(); } catch (e) { /* 無視 */ }
+    }
+
     function publishShowdown(packet) {
         if (!lotteryCtx || !D.isAdmin()) return;
+        armLiveCleanup(db.ref('live/showdown'));
         db.ref('live/showdown').set({
             id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+            at: Date.now(),
             player: lotteryCtx.player,
             packet: JSON.parse(JSON.stringify(packet))
         }).catch(() => { /* 共有に失敗しても進行は止めない */ });
@@ -1198,8 +1206,10 @@
     // ルーレットも同じ形で共有する
     function publishRoulette(ctx) {
         if (!ctx || !D.isAdmin()) return;
+        armLiveCleanup(db.ref('live/roulette'));
         db.ref('live/roulette').set({
             id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+            at: Date.now(),
             teamName: ctx.teamName,
             slot: ctx.slot,
             items: ctx.items,
