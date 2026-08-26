@@ -3108,3 +3108,39 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
     width: 100%;
     justify-content: center;
 }
+
+/* ============================================================
+   注意書き（指名前の確認など）
+   ============================================================ */
+
+/* バッジと違って複数行になるので、高さは内容にまかせる */
+.notice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.notice {
+    margin: 0;
+    padding: 10px 13px;
+    border-radius: var(--r-sm);
+    border-left: 3px solid var(--line-strong);
+    background: var(--carbon);
+    color: var(--mist);
+    font-size: 13px;
+    line-height: 1.75;
+    text-align: left;
+}
+
+.notice.is-danger {
+    border-left-color: var(--red);
+}
+
+.notice.is-warn {
+    border-left-color: var(--amber);
+}
+
+.notice.is-info {
+    border-left-color: var(--blue);
+}

@@ -415,11 +415,10 @@
 
     function warningHtml(warnings) {
         if (!warnings.length) return '';
-        const cls = { danger: 'tag-conflict', warn: 'tag-lost', info: 'tag-dup' };
-        return '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">' +
+        const cls = { danger: 'is-danger', warn: 'is-warn', info: 'is-info' };
+        return '<div class="notice-list">' +
             warnings.map(w =>
-                '<span class="tag ' + cls[w.type] + '" style="white-space:normal;text-align:left;padding:7px 11px">' +
-                D.esc(w.text) + '</span>'
+                '<p class="notice ' + (cls[w.type] || '') + '">' + D.esc(w.text) + '</p>'
             ).join('') + '</div>';
     }
 
