@@ -1169,271 +1169,28 @@
     }
 
     async function runShowdown() {
-        const board = document.getElementById('showdown');
-        const banner = document.getElementById('showdown-banner');
-        const note = document.getElementById('lottery-note');
         const spinBtn = document.getElementById('btn-spin');
         const applyBtn = document.getElementById('btn-apply-lottery');
-        const stage = document.querySelector('#lotteryModal .lottery-stage');
+        const els = {
+            stage: document.querySelector('#lotteryModal .lottery-stage'),
+            board: document.getElementById('showdown'),
+            banner: document.getElementById('showdown-banner'),
+            note: document.getElementById('lottery-note')
+        };
 
         spinBtn.disabled = true;
         applyBtn.disabled = true;
-        banner.className = 'showdown-banner';
-        banner.textContent = '';
-        stage.classList.remove('is-flash', 'is-shake', 'is-rolling');
 
         const packet = Showdown.deal(lotteryCtx.teams, { dramaChance: 0.35 });
         lotteryCtx.winner = packet.winner;
         lotteryCtx.packet = packet;
 
-        // --- 配牌 ---
-        board.innerHTML = '';
-        packet.hands.forEach(hand => {
-            const row = document.createElement('div');
-            row.className = 'sd-row is-dealing';
-            row.dataset.teamId = hand.team.id;
-            row.style.setProperty('--team-color', D.teamColor(hand.team.id));
-            row.innerHTML =
-                '<div class="sd-team">' + D.avatarHtml(hand.team) + D.esc(hand.team.name) + '</div>' +
-                '<div class="sd-cards">' + hand.cards.map(() => '<span class="pcard is-back"></span>').join('') + '</div>' +
-                '<div class="sd-hand"></div>';
-            board.appendChild(row);
-        });
-
-        const rows = Array.from(board.querySelectorAll('.sd-row'));
-        note.textContent = 'カードを配ります…';
-
-        for (let i = 0; i < rows.length; i++) {
-            rows[i].classList.remove('is-dealing');
-            Showdown.sfx.deal();
-            await wait(220);
-        }
-        await wait(500);
-
-        // --- 1〜4枚目 ---
-        const openIdx = packet.hands.map((h, n) => n);
-
-        for (let step = 1; step <= 4; step++) {
-            for (const i of openIdx) {
-                const slot = rows[i].querySelectorAll('.pcard')[step - 1];
-                slot.outerHTML = Showdown.cardHtml(packet.hands[i].cards[step - 1]);
-                Showdown.sfx.flip();
-                await wait(140);
-            }
-            updateStandings(rows, packet, step, openIdx);
-            note.textContent = step + ' 枚目';
-            await wait(step === 4 ? 300 : 620);
-        }
-
-        // --- リーチ ---
-        Showdown.sfx.tense();
-        banner.className = 'showdown-banner is-tense';
-        const leadNames = Showdown.leadersAt(openIdx.map(i => packet.hands[i]), 4).map(t => t.name);
-        banner.textContent = leadNames.join(' / ') + ' がリード';
-        note.textContent = 'このまま決まるか…？';
-        await wait(1800);
-
-        // --- 運命の5枚目 ---
-        banner.className = 'showdown-banner is-countdown';
-        banner.textContent = '運命の5枚目';
-        note.textContent = '';
-        // 周囲を落として5枚目の枠に目を集める。音は 2.76 秒後にクラッシュが来る
-        stage.classList.add('is-rolling');
-        Showdown.sfx.drumroll(2.9);
-        await wait(900);
-
-        // 数字ごとの電子音はドラムロールとぶつかるので鳴らさない
-        for (let n = 3; n >= 1; n--) {
-            banner.className = 'showdown-banner is-countdown is-digit';
-            banner.textContent = String(n);
-            await wait(620);
-        }
-
-        banner.className = 'showdown-banner is-open';
-        banner.textContent = 'オープン！';
-        stage.classList.remove('is-rolling');
-        stage.classList.add('is-flash', 'is-shake');
-        setTimeout(() => stage.classList.remove('is-flash', 'is-shake'), 500);
-        Showdown.sfx.drumrollStop();
-        await wait(400);
-
-        // 全員同時にオープン。順番にめくると「最後の1人が勝つ」と分かってしまう
-        openIdx.forEach(index => rows[index].classList.add('is-opening'));
-        await wait(360);
-
-        let improved = false;
-        openIdx.forEach(index => {
-            const hand = packet.hands[index];
-            const row = rows[index];
-            const slot = row.querySelectorAll('.pcard')[4];
-            const beforeCat = Showdown.evaluatePartial(hand.cards.slice(0, 4)).category;
-
-            slot.outerHTML = Showdown.cardHtml(hand.cards[4]);
-            row.classList.remove('is-opening');
-            row.querySelector('.sd-hand').textContent = hand.result.name;
-
-            if (hand.result.category > beforeCat) {
-                improved = true;
-                row.classList.add('is-hit');
-                setTimeout(() => row.classList.remove('is-hit'), 700);
-            }
-        });
-
-        // 人数ぶん重ねると濁るので、音は1回だけ
-        if (improved) Showdown.sfx.made();
-        else Showdown.sfx.flip();
-
-        // 役を読む間
-        await wait(1100);
-
-        // --- ちょっとまったー！ ---
-        if (packet.objection) {
-            const provIndex = packet.hands.findIndex(
-                h => packet.provisional && h.team.id === packet.provisional.id);
-            const provRow = provIndex >= 0 ? rows[provIndex] : null;
-
-            // 本物の決着とまったく同じ見た目で祝う（ここで待ったを匂わせない）
-            const provHand = packet.hands[provIndex];
-            const provLead = Showdown.leadersAt(packet.hands, 4).some(
-                t => packet.provisional && t.id === packet.provisional.id);
-
-            rows.forEach(r => r.classList.remove('is-leading'));
-            rows.forEach((r, i) => {
-                if (i === provIndex) r.classList.add('is-winner');
-                else r.classList.add('is-out');
-            });
-
-            stage.classList.add('is-flash');
-            setTimeout(() => stage.classList.remove('is-flash'), 500);
-
-            if (provLead) {
-                banner.className = 'showdown-banner is-win';
-                banner.textContent = packet.provisional.name + ' 逃げ切り';
-                Showdown.sfx.win();
-            } else {
-                banner.className = 'showdown-banner is-comeback';
-                banner.textContent = '大逆転  ' + packet.provisional.name;
-                Showdown.sfx.comeback();
-            }
-
-            const provFlavor = Showdown.flavorFor(provHand.result);
-            note.textContent = provHand.result.name + ' で ' + packet.provisional.name + ' が交渉権を獲得' +
-                (provFlavor ? '  —  ' + provFlavor : '');
-            Showdown.confetti(stage, 2400);
-            await wait(2600);
-
-            // 待った
-            stage.classList.add('is-objection');
-            banner.className = 'showdown-banner is-objection';
-            banner.textContent = 'ちょっとまったー！！';
-            note.textContent = '';
-            Showdown.sfx.objection();
-            rows.forEach(r => { r.classList.remove('is-winner'); r.classList.remove('is-out'); });
-            await wait(1500);
-
-            const winIndex = packet.hands.findIndex(h => h.team.id === packet.winner.id);
-            const winRow = rows[winIndex];
-            const winHand = packet.hands[winIndex];
-
-            winRow.classList.add('is-objector');
-            banner.textContent = 'ちょっとまったー！！　' + packet.winner.name;
-            await wait(1200);
-
-            // 出していた札を引っ込めて、別の札を叩きつける
-            const holder = winRow.querySelector('.sd-cards');
-            holder.classList.add('is-sweeping');
-            Showdown.sfx.slam(0);
-            await wait(520);
-            holder.classList.remove('is-sweeping');
-            holder.innerHTML = '';
-            winRow.querySelector('.sd-hand').textContent = '';
-            await wait(280);
-
-            const slamGap = Math.max(80, 240 - winHand.finisher.cards.length * 12);
-            if (!winHand.finisher.cards.length) await wait(500);
-            for (let i = 0; i < winHand.finisher.cards.length; i++) {
-                const el = document.createElement('span');
-                el.innerHTML = Showdown.cardHtml(winHand.finisher.cards[i]);
-                const cardEl = el.firstChild;
-                cardEl.classList.add('is-slammed');
-                holder.appendChild(cardEl);
-                Showdown.sfx.slam(i);
-                await wait(slamGap);
-            }
-
-            winRow.querySelector('.sd-hand').textContent = winHand.finisher.label;
-            winRow.classList.add('is-hit');
-            await wait(700);
-
-            rows.forEach((r, i) => {
-                r.classList.remove('is-winner');
-                if (i === winIndex) r.classList.add('is-winner');
-                else r.classList.add('is-out');
-            });
-            stage.classList.remove('is-objection');
-            stage.classList.add('is-flash');
-            setTimeout(() => stage.classList.remove('is-flash'), 500);
-
-            banner.className = 'showdown-banner is-comeback';
-            banner.textContent = winHand.finisher.label + '  ' + packet.winner.name;
-            note.textContent = winHand.finisher.tagline + '  —  ' + packet.winner.name + ' が交渉権を獲得';
-            Showdown.sfx.comeback();
-            Showdown.confetti(stage, 3200);
-
-            applyBtn.disabled = false;
-            spinBtn.disabled = false;
-            spinBtn.textContent = '配り直す';
-            lotteryCtx.running = false;
-            return;
-        }
-
-        // --- 決着 ---
-        rows.forEach(r => r.classList.remove('is-leading'));
-        const winnerIndex = packet.hands.findIndex(h => h.team.id === packet.winner.id);
-        const winnerHand = packet.hands[winnerIndex];
-
-        rows.forEach((r, i) => {
-            if (i === winnerIndex) r.classList.add('is-winner');
-            else r.classList.add('is-out');
-        });
-
-        stage.classList.add('is-flash');
-        setTimeout(() => stage.classList.remove('is-flash'), 500);
-
-        if (packet.comeback.isComeback) {
-            banner.className = 'showdown-banner is-comeback';
-            banner.textContent = '大逆転  ' + packet.winner.name;
-            Showdown.sfx.comeback();
-        } else {
-            banner.className = 'showdown-banner is-win';
-            banner.textContent = packet.winner.name + ' 逃げ切り';
-            Showdown.sfx.win();
-        }
-
-        Showdown.confetti(stage, 2800);
-
-        const flavor = Showdown.flavorFor(winnerHand.result);
-        note.textContent = winnerHand.result.name + ' で ' + packet.winner.name + ' が交渉権を獲得' +
-            (flavor ? '  —  ' + flavor : '');
+        await Showdown.play(packet, els, { sound: true });
 
         applyBtn.disabled = false;
         spinBtn.disabled = false;
         spinBtn.textContent = '配り直す';
         lotteryCtx.running = false;
-    }
-
-    // 途中経過の役とリード表示を更新する
-    function updateStandings(rows, packet, shown, openIdx) {
-        const targets = openIdx || packet.hands.map((h, n) => n);
-        const open = targets.map(n => packet.hands[n]);
-        const leaderIds = Showdown.leadersAt(open, shown).map(t => t.id);
-        open.forEach(hand => {
-            const i = packet.hands.indexOf(hand);
-            const row = rows[i];
-            row.classList.toggle('is-leading', leaderIds.indexOf(hand.team.id) !== -1);
-            const partial = Showdown.evaluatePartial(hand.cards.slice(0, shown));
-            row.querySelector('.sd-hand').textContent = partial.category > 0 ? partial.name : '';
-        });
     }
 
     function applyLottery() {
