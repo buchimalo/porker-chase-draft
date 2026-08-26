@@ -375,35 +375,30 @@ h5 {
     background: var(--obsidian);
 }
 
-/* 指名中は、誰の番か遠目でも分かるよう点滅させる */
+/* 指名中は、誰の番か遠目でも分かるよう明滅させる。
+   枠は出さない。背景画像はアニメーションで補間されずパッと切り替わるので、
+   内側いっぱいに広げた影で面を塗る（文字より下に描かれるので字はくすまない） */
 .pick-card.is-turn {
     background: var(--obsidian);
-    animation: turn-blink 1.1s ease-in-out infinite;
+    animation: turn-blink 2.4s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 
 @keyframes turn-blink {
     0%,
     100% {
-        background: var(--obsidian);
-        box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0);
+        box-shadow: inset 0 0 0 999px rgba(var(--accent-rgb), 0);
     }
 
     50% {
-        background:
-            linear-gradient(rgba(var(--accent-rgb), .14), rgba(var(--accent-rgb), .14)),
-            var(--obsidian);
-        box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), .6);
+        box-shadow: inset 0 0 0 999px rgba(var(--accent-rgb), .17);
     }
 }
 
-/* 動きが苦手な人の設定を尊重する。点滅はやめて出しっぱなしにする */
+/* 動きが苦手な人の設定を尊重する。明滅はやめて点いたままにする */
 @media (prefers-reduced-motion: reduce) {
     .pick-card.is-turn {
         animation: none;
-        background:
-            linear-gradient(rgba(var(--accent-rgb), .14), rgba(var(--accent-rgb), .14)),
-            var(--obsidian);
-        box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), .6);
+        box-shadow: inset 0 0 0 999px rgba(var(--accent-rgb), .17);
     }
 }
 
