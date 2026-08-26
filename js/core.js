@@ -47,8 +47,15 @@
         '#f26d9c'  // 8
     ];
 
-    function teamColor(teamId) {
-        const n = parseInt(String(teamId).replace(/\D/g, ''), 10);
+    /**
+     * 監督のイメージカラー。監督オブジェクトでもIDでも渡せる。
+     * 未設定の監督は、登録順のパレットで補う。
+     */
+    function teamColor(team) {
+        const isObj = team && typeof team === 'object';
+        if (isObj && team.color) return team.color;
+        const id = isObj ? team.id : team;
+        const n = parseInt(String(id).replace(/\D/g, ''), 10);
         if (!n || isNaN(n)) return TEAM_COLORS[0];
         return TEAM_COLORS[(n - 1) % TEAM_COLORS.length];
     }
@@ -245,7 +252,7 @@
                 name: (team && team.name) || id,
                 order: (team && typeof team.order === 'number') ? team.order : null,
                 icon: (team && team.icon) || '',
-                color: teamColor(id)
+                color: (team && team.color) || teamColor(id)
             }))
             .sort((a, b) => {
                 if (a.order !== null && b.order !== null) return a.order - b.order;

@@ -836,12 +836,13 @@
             const picks = countPicks(team.id);
             const row = document.createElement('div');
             row.className = 'team-row';
-            row.style.setProperty('--team-color', D.teamColor(team.id));
+            row.style.setProperty('--team-color', D.teamColor(team));
 
             row.innerHTML =
                 '<span class="team-row-order">' + (index + 1) + '</span>' +
+                '<input type="color" class="team-color" value="' + D.esc(D.teamColor(team)) + '" title="イメージカラー">' +
                 D.avatarHtml(team) +
-                '<input type="text" class="input" value="' + D.esc(team.name) + '" placeholder="監督名 / チーム名" maxlength="30">' +
+                '<input type="text" class="input team-name" value="' + D.esc(team.name) + '" placeholder="監督名 / チーム名" maxlength="30">' +
                 '<input type="text" class="input team-icon" value="' + D.esc(team.icon || '') + '" placeholder="アイコン（画像パス / @X名）" maxlength="200">' +
                 '<span class="team-row-meta">' + (picks ? picks + '指名' : '未指名') + '</span>' +
                 '<button type="button" class="btn2 btn2-sm" data-act="up" title="上へ"' + (index === 0 ? ' disabled' : '') + '>↑</button>' +
@@ -849,15 +850,22 @@
                 '<button type="button" class="btn2 btn2-sm" data-act="link" title="指名シートのURLをコピー">URL</button>' +
                 '<button type="button" class="btn2 btn2-sm btn2-danger" data-act="remove" title="削除">✕</button>';
 
-            const inputs = row.querySelectorAll('input');
-            inputs[0].addEventListener('input', e => { team.name = e.target.value; });
-            inputs[1].addEventListener('input', e => {
+            const nameInput = row.querySelector('.team-name');
+            nameInput.addEventListener('input', e => { team.name = e.target.value; });
+            nameInput.addEventListener('input', renderTeamUrls);
+
+            row.querySelector('.team-icon').addEventListener('input', e => {
                 team.icon = e.target.value;
                 const mark = row.querySelector('.team-avatar, .pick-dot');
                 if (mark) mark.outerHTML = D.avatarHtml(team);
             });
 
-            inputs[0].addEventListener('input', renderTeamUrls);
+            row.querySelector('.team-color').addEventListener('input', e => {
+                team.color = e.target.value;
+                row.style.setProperty('--team-color', team.color);
+                const mark = row.querySelector('.team-avatar, .pick-dot');
+                if (mark) mark.outerHTML = D.avatarHtml(team);
+            });
 
             row.querySelectorAll('button[data-act]').forEach(btn => {
                 btn.addEventListener('click', () => handleTeamRowAction(btn.dataset.act, index));
@@ -969,6 +977,7 @@
             const entry = { id: team.id, name: names[index], order: index + 1 };
             const icon = (team.icon || '').trim();
             if (icon) entry.icon = icon;
+            if (team.color) entry.color = team.color;
             teamsObj[team.id] = entry;
         });
 
@@ -1587,7 +1596,7 @@
         box.innerHTML = shown.map(e => {
             const rl = D.isRouletteName(e.name) ? ' is-roulette-slot' : '';
             if (e.state === 'taken') {
-                const color = D.teamColor(e.info.teamId);
+                const color = D.teamColor(state.teams[e.info.teamId] || e.info.teamId);
                 return '<div class="pl-item is-taken' + rl + '" style="--team-color:' + color + '">' +
                     '<span class="pl-name"><s>' + D.esc(e.name) + '</s></span>' +
                     '<span class="pl-meta">' + e.info.round + '巡目 · ' + D.esc(nameOf(e.info.teamId)) + '</span>' +
