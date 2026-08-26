@@ -34,7 +34,7 @@
 
     /* 状態 */
     --green: #1ed760;
-    --red: #f3727f;
+    --red: #f1464f;
     --amber: #ffa42b;
     --blue: #539df5;
 
@@ -229,13 +229,13 @@ h5 {
 }
 
 .btn2-danger {
-    background: rgba(244, 81, 95, .16);
-    color: #ff9aa3;
+    background: rgba(239, 46, 56, .16);
+    color: #ff757c;
 }
 
 .btn2-danger:hover:not(:disabled) {
-    background: rgba(244, 81, 95, .3);
-    color: #ffc2c8;
+    background: rgba(239, 46, 56, .3);
+    color: #ffa8ad;
 }
 
 .btn2-lg {
@@ -457,8 +457,8 @@ h5 {
 }
 
 .tag-conflict {
-    background: rgba(244, 81, 95, .2);
-    color: #ff9aa3;
+    background: rgba(239, 46, 56, .2);
+    color: #ff757c;
 }
 
 .tag-lost {
@@ -493,7 +493,7 @@ h5 {
 
 .conflict-alert {
     padding: 14px 18px 16px;
-    background: rgba(244, 81, 95, .1);
+    background: rgba(239, 46, 56, .1);
 }
 
 .conflict-alert h6 {
@@ -501,7 +501,7 @@ h5 {
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0;
-    color: #ff9aa3;
+    color: #ff757c;
 }
 
 .conflict-item {
@@ -604,7 +604,7 @@ h5 {
 }
 
 .sd-row.is-objector {
-    background: rgba(244, 81, 95, .2);
+    background: rgba(239, 46, 56, .2);
     filter: none !important;
     opacity: 1 !important;
 }
@@ -677,7 +677,7 @@ h5 {
 }
 
 .pcard.is-red {
-    color: #d02440;
+    color: #d1151e;
 }
 
 .pcard.is-back {
@@ -1319,7 +1319,7 @@ table.matrix td.empty {
 }
 
 .pl-item.is-contested {
-    background: rgba(244, 81, 95, .16);
+    background: rgba(239, 46, 56, .16);
 }
 
 .pl-item.is-contested::before {
@@ -1327,7 +1327,7 @@ table.matrix td.empty {
 }
 
 .pl-item.is-contested .pl-meta {
-    color: #ff8b95;
+    color: #ff6b72;
     font-weight: 500;
 }
 
@@ -1441,7 +1441,7 @@ table.matrix td.empty {
 }
 
 .sheet-status.state-redo {
-    background: rgba(244, 81, 95, .18);
+    background: rgba(239, 46, 56, .18);
 }
 
 .sheet-status.state-redo .sheet-status-icon {
@@ -2493,11 +2493,11 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
 }
 
 .pick-card.is-conflict {
-    background: rgba(255, 143, 163, .05);
+    background: rgba(255, 117, 124, .05);
 }
 
 .pick-card.is-conflict:hover {
-    background: rgba(255, 143, 163, .08);
+    background: rgba(255, 117, 124, .08);
 }
 
 /* 印刷時は装飾を落とす */
