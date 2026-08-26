@@ -1231,6 +1231,8 @@
         banner.className = 'showdown-banner is-countdown';
         banner.textContent = '運命の5枚目';
         note.textContent = '';
+        // 「運命の5枚目」から「オープン！」までの 2.76 秒にドラムロールを重ねる
+        Showdown.sfx.drumroll(2.9);
         await wait(900);
 
         for (let n = 3; n >= 1; n--) {
@@ -1240,6 +1242,7 @@
             await wait(620);
         }
         banner.textContent = 'オープン！';
+        Showdown.sfx.drumrollStop();
         await wait(400);
 
         // 勝者を最後に残してめくる

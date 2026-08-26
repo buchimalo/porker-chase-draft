@@ -696,6 +696,64 @@
         src.start(start);
     }
 
+    // ドラムロール。打点を並べたバッファを1本作って鳴らすので、
+    // 途中で止めたいときは source を止めるだけで済む。
+    let rollNode = null;
+
+    function drumrollStart(seconds) {
+        const ac = ctx();
+        if (!ac) return;
+        drumrollStop();
+
+        const dur = Math.max(0.5, seconds || 3);
+        const frames = Math.floor(ac.sampleRate * dur);
+        const buffer = ac.createBuffer(1, frames, ac.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        // 打点を並べる。終盤にかけて間隔を詰めながら音量を上げる
+        let at = 0;
+        let interval = 0.055;
+        while (at < dur) {
+            const head = Math.floor(at * ac.sampleRate);
+            const len = Math.floor(ac.sampleRate * 0.028);
+            const swell = 0.35 + 0.65 * (at / dur);
+            for (let i = 0; i < len && head + i < frames; i++) {
+                const env = Math.pow(1 - i / len, 2.2);
+                data[head + i] += (Math.random() * 2 - 1) * env * swell;
+            }
+            at += interval;
+            interval = Math.max(0.024, interval * 0.986);
+        }
+
+        const src = ac.createBufferSource();
+        const band = ac.createBiquadFilter();
+        const amp = ac.createGain();
+        src.buffer = buffer;
+        band.type = 'bandpass';
+        band.frequency.value = 2100;   // スネアらしい帯域に寄せる
+        band.Q.value = 0.7;
+        amp.gain.setValueAtTime(0.16, ac.currentTime);
+        src.connect(band).connect(amp).connect(ac.destination);
+        src.start();
+        rollNode = { src: src, amp: amp };
+    }
+
+    function drumrollStop() {
+        const node = rollNode;
+        if (!node) return;
+        rollNode = null;
+        const ac = audioCtx;
+        if (!ac) return;
+        // ぶつ切りにならないよう短くフェードしてから止める
+        const now = ac.currentTime;
+        try {
+            node.amp.gain.cancelScheduledValues(now);
+            node.amp.gain.setValueAtTime(node.amp.gain.value, now);
+            node.amp.gain.linearRampToValueAtTime(0.0001, now + 0.06);
+        } catch (e) { /* 無視 */ }
+        try { node.src.stop(now + 0.09); } catch (e) { /* 無視 */ }
+    }
+
     const sfx = {
         // 最初のクリックで音を有効化する（ブラウザの自動再生制限対策）
         unlock() {
@@ -707,6 +765,8 @@
         made() { tone(880, 0.12, 'triangle', 0.14); tone(1320, 0.14, 'triangle', 0.10, 0.06); },
         tense() { tone(150, 0.5, 'sawtooth', 0.07); },
         countdown(step) { tone(440 + step * 110, 0.14, 'square', 0.13); },
+        drumroll(seconds) { drumrollStart(seconds); },
+        drumrollStop() { drumrollStop(); },
         win() {
             [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.32, 'triangle', 0.16, i * 0.09));
         },
