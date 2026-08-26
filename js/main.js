@@ -296,8 +296,18 @@
             board.appendChild(summary);
         }
 
+        markAllIn(submitted, ordered.length);
         updateProgress(submitted, ordered.length);
         renderRevealState(submitted, ordered.length);
+    }
+
+    // 全チームが確定した時点でその巡を記録する。以後は取り消しがあってもロックが外れない
+    function markAllIn(done, total) {
+        if (!total || done < total) return;
+        if (!D.isAdmin()) return;
+        const key = 'round' + state.currentRound;
+        if (D.isAllIn(state.settings, state.currentRound)) return;
+        db.ref('draft/settings/allIn/' + key).set(true).catch(() => { /* 無視 */ });
     }
 
     function updateProgress(done, total) {
@@ -777,7 +787,8 @@
             'draft/nominations': null,
             'draft/currentRound': 1,
             'draft/lottery': null,
-            'draft/settings/revealed': null
+            'draft/settings/revealed': null,
+            'draft/settings/allIn': null
         })
             .then(() => D.toast('ドラフトをリセットしました', 'success'))
             .catch(err => D.toast('エラー: ' + err.message, 'danger'));

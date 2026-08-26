@@ -225,8 +225,8 @@
         return D.takenPlayers(state.nominations, state.settings.totalRounds, { beforeRound: state.currentRound });
     }
 
-    // 今の巡で他チームが指名中の選手（被せると抽選）
-    function contestedNow() {
+    // 今の巡で他チームが確定済みの選手
+    function othersNow() {
         const map = new Map();
         if (state.settings.hidePicks && !D.isRevealed(state.settings, state.currentRound)) return map;
 
@@ -253,16 +253,22 @@
         block.classList.remove('hide');
 
         const taken = takenBefore();
-        const contested = contestedNow();
+        const others = othersNow();
+        // 全チームが出し揃うまではロックしない（重複＝ポーカー抽選を従来どおり成立させる）
+        const locking = D.isAllIn(state.settings, state.currentRound);
         const current = D.normalizeName(document.getElementById('player-name').value);
+        // 過去の巡で指名済み、または今の巡で確定済み＝選べない
+        const isLocked = name => {
+            const k = D.normalizeName(name);
+            return taken.has(k) || (locking && others.has(k));
+        };
 
-        const available = pool.filter(name => !taken.has(D.normalizeName(name)));
+        const available = pool.filter(name => !isLocked(name));
         count.textContent = '残り ' + available.length + ' / ' + pool.length + ' 名';
 
         const matched = pool.filter(name => !poolFilter || D.normalizeName(name).indexOf(poolFilter) !== -1);
         // 指名済みは末尾にまとめる（選べる選手を先に見せる）
-        const shown = matched.filter(n => !taken.has(D.normalizeName(n)))
-            .concat(matched.filter(n => taken.has(D.normalizeName(n))));
+        const shown = matched.filter(n => !isLocked(n)).concat(matched.filter(n => isLocked(n)));
         box.innerHTML = '';
 
         if (!shown.length) {
@@ -273,17 +279,20 @@
         shown.forEach(name => {
             const key = D.normalizeName(name);
             const takenBy = taken.get(key);
+            const heldBy = locking ? others.get(key) : null;
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'pool-chip';
 
-            if (takenBy) {
+            if (takenBy || heldBy) {
+                const why = takenBy ? takenBy.round + '巡目で指名済' : heldBy + ' が確定済';
                 btn.classList.add('taken');
                 btn.disabled = true;
-                btn.innerHTML = D.esc(name) + '<span class="by">' + takenBy.round + '巡目で指名済</span>';
+                btn.title = why;
+                btn.innerHTML = D.esc(name) + '<span class="by">' + D.esc(why) + '</span>';
             } else {
                 if (key === current) btn.classList.add('selected');
-                const rival = contested.get(key);
+                const rival = others.get(key);
                 const rl = D.isRouletteName(name);
                 if (rl) btn.classList.add('is-roulette-slot');
                 btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
@@ -313,12 +322,11 @@
             });
         }
 
-        const rival = contestedNow().get(key);
+        const rival = othersNow().get(key);
         if (rival) {
-            warnings.push({
-                type: 'warn',
-                text: rival + ' が同じ選手を指名中です。このまま指名すると抽選になります'
-            });
+            warnings.push(D.isAllIn(state.settings, state.currentRound)
+                ? { type: 'danger', text: 'この選手は今の巡で ' + rival + ' が確定済みです（指名できません）' }
+                : { type: 'warn', text: rival + ' が同じ選手を指名中です。このまま指名すると抽選になります' });
         }
 
         const pool = D.playerPool({ players: state.players });

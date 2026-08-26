@@ -371,13 +371,19 @@
         return {
             totalRounds: s.totalRounds || DEFAULT_ROUNDS,
             hidePicks: !!s.hidePicks,
-            revealed: s.revealed || {}
+            revealed: s.revealed || {},
+            allIn: s.allIn || {}
         };
     }
 
     function isRevealed(settings, round) {
         if (!settings.hidePicks) return true;
         return !!settings.revealed['round' + round];
+    }
+
+    // その巡で一度でも全チームが確定したか（以後その巡の指名はロックされる）
+    function isAllIn(settings, round) {
+        return !!settings.allIn['round' + round];
     }
 
     // 選手プール（textarea 保存形式）を配列に
@@ -675,6 +681,7 @@
         takenPlayers,
         readSettings,
         isRevealed,
+        isAllIn,
         playerPool,
         roulettePool,
         rouletteAvailable,
