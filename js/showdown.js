@@ -917,14 +917,77 @@
         });
     }
 
+    /* ---------- 効果音 ---------- */
+
+    // 端末によっては AudioContext から音が出ない（合成音だけ無音になる）。
+    // 音源ファイルの再生は確実に鳴るので、そちらを本線にして、
+    // 合成はファイルが読めなかったときの控えとして残す。
+    // sounds/se/*.mp3 は現在の合成音をそのまま書き出したもの
+    const CLIP_DIR = 'sounds/se/';
+    const CLIP_NAMES = [
+        'deal', 'flip', 'made', 'tense', 'win', 'comeback', 'objection', 'lose',
+        'slam0', 'slam1', 'slam2', 'slam3', 'slam4'
+    ];
+    // 続けざまに鳴るものは、鳴り終わる前に次が来るので複数持つ
+    const CLIP_POOL = { flip: 6, deal: 3, made: 2 };
+    const clips = {};
+
+    function clipPool(name) {
+        if (clips[name]) return clips[name];
+        if (typeof global.Audio === 'undefined') return null;
+        const pool = { els: [], at: 0, broken: false };
+        const count = CLIP_POOL[name] || 1;
+        for (let i = 0; i < count; i++) {
+            const el = new global.Audio(CLIP_DIR + name + '.mp3');
+            el.preload = 'auto';
+            el.addEventListener('error', () => { pool.broken = true; });
+            pool.els.push(el);
+        }
+        clips[name] = pool;
+        return pool;
+    }
+
+    // 鳴らせたら true。false のときだけ呼び出し側が合成に切り替える
+    function playClip(name) {
+        const pool = clipPool(name);
+        if (!pool || pool.broken) return false;
+        const el = pool.els[pool.at];
+        pool.at = (pool.at + 1) % pool.els.length;
+        try {
+            el.currentTime = 0;
+            const played = el.play();
+            if (played && played.catch) played.catch(() => { /* 無視 */ });
+        } catch (e) {
+            return false;
+        }
+        return true;
+    }
+
+    // 端末は、ユーザー操作の中で一度鳴らしていない音源の再生を拒否する。
+    // 音量を落として一瞬だけ鳴らし、すぐ戻すことで許可を取っておく
+    function primeElement(el) {
+        if (!el || !el.paused) return;
+        const volume = el.volume;
+        el.volume = 0;
+        const done = () => { el.pause(); el.currentTime = 0; el.volume = volume; };
+        let played = null;
+        try { played = el.play(); } catch (e) { el.volume = volume; return; }
+        if (played && played.then) played.then(done).catch(() => { el.volume = volume; });
+        else done();
+    }
+
     const sfx = {
         // 最初のクリックで音を有効化する（ブラウザの自動再生制限対策）
         unlock() {
+            CLIP_NAMES.forEach(name => {
+                const pool = clipPool(name);
+                if (pool) pool.els.forEach(primeElement);
+            });
+            primeElement(rollElement());
+
+            // 音源が読めなかったときのために、合成のほうも起こしておく
             const ac = ctx();
             if (ac && ac.state === 'suspended') ac.resume();
-
-            // iOS は resume() だけでは足りず、操作の中で実際に音を1つ
-            // 鳴らすまで合成音が出ない。長さ1サンプルの無音を鳴らしておく
             if (ac) {
                 try {
                     const buf = ac.createBuffer(1, 1, ac.sampleRate);
@@ -934,51 +997,47 @@
                     src.start(0);
                 } catch (e) { /* 無視 */ }
             }
-
-            // スマホは、ユーザー操作の中で一度鳴らしていない音源の再生を拒否する。
-            // 音量を落として一瞬だけ鳴らし、すぐ戻すことで許可を取っておく
-            const el = rollElement();
-            if (el && el.paused) {
-                const volume = el.volume;
-                el.volume = 0;
-                const done = () => {
-                    el.pause();
-                    el.currentTime = 0;
-                    el.volume = volume;
-                };
-                let played = null;
-                try { played = el.play(); } catch (e) { /* 無視 */ }
-                if (played && played.then) played.then(done).catch(() => { el.volume = volume; });
-                else done();
-            }
         },
-        deal() { noise(0.06, 0.12); },
-        flip() { tone(660, 0.06, 'square', 0.07); },
-        made() { tone(880, 0.12, 'triangle', 0.14); tone(1320, 0.14, 'triangle', 0.10, 0.06); },
-        tense() { tone(150, 0.5, 'sawtooth', 0.07); },
+        deal() { if (!playClip('deal')) noise(0.06, 0.12); },
+        flip() { if (!playClip('flip')) tone(660, 0.06, 'square', 0.07); },
+        made() {
+            if (playClip('made')) return;
+            tone(880, 0.12, 'triangle', 0.14);
+            tone(1320, 0.14, 'triangle', 0.10, 0.06);
+        },
+        tense() { if (!playClip('tense')) tone(150, 0.5, 'sawtooth', 0.07); },
         countdown(step) { tone(440 + step * 110, 0.14, 'square', 0.13); },
         drumroll(seconds) { drumrollStart(seconds); },
         drumrollStop() { drumrollStop(); },
         drumrollAbort() { drumrollAbort(); },
         win() {
+            if (playClip('win')) return;
             [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.32, 'triangle', 0.16, i * 0.09));
         },
         comeback() {
+            if (playClip('comeback')) return;
             noise(0.35, 0.34);
             tone(110, 0.5, 'sawtooth', 0.2);
             [392, 523, 659, 880, 1175].forEach((f, i) => tone(f, 0.36, 'square', 0.15, 0.16 + i * 0.07));
         },
         objection() {
+            if (playClip('objection')) return;
             noise(0.5, 0.4);
             tone(90, 0.7, 'sawtooth', 0.24);
             tone(180, 0.5, 'square', 0.16, 0.05);
             [1400, 1100, 800].forEach((f, i) => tone(f, 0.16, 'square', 0.14, 0.1 + i * 0.1));
         },
         slam(i) {
+            const step = Math.max(0, Math.min(4, Math.floor(i) || 0));
+            if (playClip('slam' + step)) return;
             noise(0.12, 0.28);
-            tone(160 + i * 60, 0.18, 'square', 0.16);
+            tone(160 + step * 60, 0.18, 'square', 0.16);
         },
-        lose() { tone(220, 0.28, 'sine', 0.08); tone(165, 0.34, 'sine', 0.07, 0.1); }
+        lose() {
+            if (playClip('lose')) return;
+            tone(220, 0.28, 'sine', 0.08);
+            tone(165, 0.34, 'sine', 0.07, 0.1);
+        }
     };
 
     /* ---------- 紙吹雪 ---------- */
