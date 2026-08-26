@@ -3144,3 +3144,35 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
 .notice.is-info {
     border-left-color: var(--blue);
 }
+
+/* ============================================================
+   「ちょっとまったー！」の決着札（盤外から出てくるもの）
+   ============================================================ */
+
+.pcard.is-shogi {
+    background: #f0e2c0;
+    border-color: #8a6a2f;
+    color: #241a08;
+}
+
+.pcard.is-hand {
+    background: #f5f5f5;
+    border-color: var(--accent);
+}
+
+.pcard.is-paper {
+    background: #fafafa;
+    border-color: var(--line-bright);
+    color: #101214;
+}
+
+.pcard.is-glitch {
+    background: var(--obsidian);
+    border-color: var(--red);
+    color: var(--paper);
+}
+
+.pcard.is-cat {
+    background: #f5f5f5;
+    border-color: var(--amber);
+}

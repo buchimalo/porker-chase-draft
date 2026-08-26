@@ -400,7 +400,8 @@
     function anySuit() { return SUITS[Math.floor(Math.random() * SUITS.length)].key; }
     function quads(rank) { return [card(rank, 's'), card(rank, 'h'), card(rank, 'd'), card(rank, 'c')]; }
 
-    // 理屈は無視。「そんな役あるか！」で笑わせるための決着パターン
+    // 理屈は無視。「そんな役あるか！」で笑わせるための決着パターン。
+    // 強い役を見せるより、盤外から何か出てくるほうが盛り上がる
     const FINISHERS = [
         {
             label: '手ぶら',
@@ -408,59 +409,34 @@
             build: () => []
         },
         {
-            label: 'スペード13枚',
-            tagline: 'スペードを全部持っている',
-            build: () => [14, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map(r => card(r, 's'))
-        },
-        {
-            label: '∞',
-            tagline: 'そんな数字はデッキに入っていない',
-            build: () => [{ face: '∞', cls: 'is-infinity' }]
-        },
-        {
-            label: '麻雀',
-            tagline: 'ゲームが違う',
-            build: () => ['🀄', '🀇', '🀙', '🀐', '🀀'].map(f => ({ face: f, cls: 'is-mahjong' }))
-        },
-        {
-            label: '花札の三光',
-            tagline: 'こちらはこちらで役がある',
-            build: () => ['🎴', '🎴', '🎴'].map(f => ({ face: f, cls: 'is-hanafuda' }))
-        },
-        {
-            label: '現金',
-            tagline: 'カードではなく金で解決した',
-            build: () => ['🪙', '🪙', '🪙', '💰', '🪙'].map(f => ({ face: f, cls: 'is-coin' }))
-        },
-        {
             label: '伏せたまま',
             tagline: '見せる必要すらないらしい',
             build: () => [{ back: true }, { back: true }, { back: true }, { back: true }, { back: true }]
         },
         {
+            label: 'たった1枚',
+            tagline: '残り4枚はどこへ消えた',
+            build: () => [card(14, 's')]
+        },
+        {
+            label: 'ブタ',
+            tagline: '差し替えた結果がこれ。それでも押し切った',
+            build: () => [card(2, 'd'), card(4, 'c'), card(6, 's'), card(9, 'h'), card(11, 'c')]
+        },
+        {
+            label: '2 のワンペア',
+            tagline: 'わざわざ引っ込めて出したのが最弱の役',
+            build: () => [card(2, 's'), card(2, 'h'), card(5, 'c'), card(7, 'd'), card(9, 's')]
+        },
+        {
+            label: 'スペード13枚',
+            tagline: 'スペードを全部持っている',
+            build: () => [14, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map(r => card(r, 's'))
+        },
+        {
             label: 'エース13枚',
             tagline: 'デッキがエースしか入っていない',
             build: () => { const out = []; for (let i = 0; i < 13; i++) out.push(card(14, SUITS[i % 4].key)); return out; }
-        },
-        {
-            label: '別ゲームのカード',
-            tagline: 'ドロー4を出された',
-            build: () => ['🔴', '🟡', '🟢', '🔵'].map(f => ({ face: f, cls: 'is-uno' })).concat([{ face: '+4', cls: 'is-uno' }])
-        },
-        {
-            label: 'サイコロ',
-            tagline: 'ポーカーですらなくなった',
-            build: () => ['🎲', '🎲', '🎲', '🎲', '🎲'].map(f => ({ face: f, cls: 'is-dice' }))
-        },
-        {
-            label: '王',
-            tagline: '格が違うとのこと',
-            build: () => [{ face: '👑', cls: 'is-crown' }]
-        },
-        {
-            label: 'ポカチェのチップ',
-            tagline: '場のチップを全部持ってきた',
-            build: () => ['🔵', '🟣', '🟠'].map(f => ({ face: f, cls: 'is-chip' })).concat([card(14, 's'), JOKER])
         },
         {
             label: 'ファイブカード',
@@ -471,11 +447,6 @@
             label: 'シックスカード',
             tagline: 'デッキに4枚しかないはずのカードが6枚ある',
             build: () => { const r = anyRank(); return quads(r).concat([card(r, 'h'), card(r, 'd')]); }
-        },
-        {
-            label: 'ロイヤルストレートフラッシュ',
-            tagline: 'いつの間に。教科書どおりの最強',
-            build: () => { const su = anySuit(); return [10, 11, 12, 13, 14].map(r => card(r, su)); }
         },
         {
             label: '6枚目のジョーカー',
@@ -493,44 +464,114 @@
             build: () => [JOKER, JOKER, JOKER, JOKER, JOKER, JOKER, JOKER]
         },
         {
-            label: 'ブタ',
-            tagline: '差し替えた結果がこれ。それでも押し切った',
-            build: () => [card(2, 'd'), card(4, 'c'), card(6, 's'), card(9, 'h'), card(11, 'c')]
-        },
-        {
-            label: '2 のワンペア',
-            tagline: 'わざわざ引っ込めて出したのが最弱の役',
-            build: () => [card(2, 's'), card(2, 'h'), card(5, 'c'), card(7, 'd'), card(9, 's')]
-        },
-        {
-            label: 'たった1枚',
-            tagline: '残り4枚はどこへ消えた',
-            build: () => [card(14, 's')]
-        },
-        {
-            label: 'フォーカード',
-            tagline: '出どころ以外は完璧',
-            build: () => quads(anyRank()).concat([card(anyRank(), 'h')])
-        },
-        {
-            label: 'エース全部＋ジョーカー',
-            tagline: 'エース4枚。まだ何か持っている',
-            build: () => quads(14).concat([JOKER])
-        },
-        {
-            label: 'K が5枚',
-            tagline: '王様が1人多い',
-            build: () => quads(13).concat([card(13, 'h')])
-        },
-        {
-            label: '全部スペード',
-            tagline: '全部スペードに揃え直してきた',
-            build: () => { const rs = []; while (rs.length < 5) { const r = anyRank(); if (rs.indexOf(r) === -1) rs.push(r); } return rs.map(r => card(r, 's')); }
-        },
-        {
             label: 'ジョーカー＋エース',
             tagline: 'ルールブックを閉じてください',
             build: () => [JOKER, card(14, 's'), JOKER, card(14, 'h'), JOKER]
+        },
+        {
+            label: '∞',
+            tagline: 'そんな数字はデッキに入っていない',
+            build: () => [{ face: '∞', cls: 'is-infinity' }]
+        },
+        {
+            label: '麻雀',
+            tagline: 'ゲームが違う',
+            build: () => ['🀄', '🀇', '🀙', '🀐', '🀀'].map(f => ({ face: f, cls: 'is-mahjong' }))
+        },
+        {
+            label: '花札の三光',
+            tagline: 'こちらはこちらで役がある',
+            build: () => ['🎴', '🎴', '🎴'].map(f => ({ face: f, cls: 'is-hanafuda' }))
+        },
+        {
+            label: '王手',
+            tagline: '盤面が違う',
+            build: () => ['王', '飛', '角', '金', '歩'].map(f => ({ face: f, cls: 'is-shogi' }))
+        },
+        {
+            label: '別ゲームのカード',
+            tagline: 'ドロー4を出された',
+            build: () => ['🔴', '🟡', '🟢', '🔵'].map(f => ({ face: f, cls: 'is-uno' })).concat([{ face: '+4', cls: 'is-uno' }])
+        },
+        {
+            label: 'サイコロ',
+            tagline: 'ポーカーですらなくなった',
+            build: () => ['🎲', '🎲', '🎲', '🎲', '🎲'].map(f => ({ face: f, cls: 'is-dice' }))
+        },
+        {
+            label: 'じゃんけん',
+            tagline: 'ポーカーを諦めた',
+            build: () => ['✊', '✌', '🖐'].map(f => ({ face: f, cls: 'is-hand' }))
+        },
+        {
+            label: '現金',
+            tagline: 'カードではなく金で解決した',
+            build: () => ['🪙', '🪙', '🪙', '💰', '🪙'].map(f => ({ face: f, cls: 'is-coin' }))
+        },
+        {
+            label: '札束',
+            tagline: '交渉の席に金を積んできた',
+            build: () => ['💴', '💴', '💴'].map(f => ({ face: f, cls: 'is-coin' }))
+        },
+        {
+            label: 'ポカチェのチップ',
+            tagline: '場のチップを全部持ってきた',
+            build: () => ['🔵', '🟣', '🟠'].map(f => ({ face: f, cls: 'is-chip' })).concat([card(14, 's'), JOKER])
+        },
+        {
+            label: '王',
+            tagline: '格が違うとのこと',
+            build: () => [{ face: '👑', cls: 'is-crown' }]
+        },
+        {
+            label: '契約書',
+            tagline: '先に契約が済んでいるらしい',
+            build: () => ['📄', '🖊'].map(f => ({ face: f, cls: 'is-paper' }))
+        },
+        {
+            label: 'ルールブック',
+            tagline: 'カードではなく規則のほうを出してきた',
+            build: () => [{ face: '📖', cls: 'is-paper' }]
+        },
+        {
+            label: '診断書',
+            tagline: 'そういう事情なら仕方ない',
+            build: () => [{ face: '🏥', cls: 'is-paper' }, { face: '📄', cls: 'is-paper' }]
+        },
+        {
+            label: '回線落ち',
+            tagline: '通信環境のせいということで',
+            build: () => ['📶', '❌'].map(f => ({ face: f, cls: 'is-glitch' }))
+        },
+        {
+            label: '時間切れ',
+            tagline: '制限時間を主張しはじめた',
+            build: () => [{ face: '⏰', cls: 'is-glitch' }]
+        },
+        {
+            label: '猫がカードに乗った',
+            tagline: '手札は見えなくなった。以上',
+            build: () => [{ back: true }, { face: '🐈', cls: 'is-cat' }, { back: true }]
+        },
+        {
+            label: '土下座',
+            tagline: '札ではなく誠意で押し切った',
+            build: () => [{ face: '🙇', cls: 'is-hand' }]
+        },
+        {
+            label: '菓子折り',
+            tagline: '賄賂にしては安い',
+            build: () => ['🍡', '🍘', '🍵'].map(f => ({ face: f, cls: 'is-paper' }))
+        },
+        {
+            label: '白紙',
+            tagline: '何も書かれていないカードを5枚',
+            build: () => ['', '', '', '', ''].map(f => ({ face: f || ' ', cls: 'is-paper' }))
+        },
+        {
+            label: '鏡',
+            tagline: '相手の手札をそのまま返してきた',
+            build: () => [{ face: '🪞', cls: 'is-glitch' }]
         }
     ];
 
@@ -584,7 +625,7 @@
     function deal(teams, options) {
         const opts = options || {};
         const dramaChance = typeof opts.dramaChance === 'number' ? opts.dramaChance : 0.35;
-        const objectionChance = typeof opts.objectionChance === 'number' ? opts.objectionChance : 0.20;
+        const objectionChance = typeof opts.objectionChance === 'number' ? opts.objectionChance : 0.33;
 
         const winner = teams[Math.floor(Math.random() * teams.length)];
         const wantDrama = Math.random() < dramaChance;
