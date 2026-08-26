@@ -320,10 +320,10 @@
         const current = D.normalizeName(document.getElementById('player-name').value);
         const isLocked = name => !!lockReason(name, ctx);
 
-        // 「残り」は、まだ誰にも取られていない選手の数。ボードの「残り選手」と
-        // 同じ数え方にする（自分が選べるかどうかとは別）。
-        // 順番待ちのルーレット枠は、消費されていないので残りに数える
-        const remaining = pool.filter(name => !ctx.used.has(D.normalizeName(name)));
+        // 「残り」は、まだ押さえられていない数。ボードの「残り選手」と同じ
+        // 数え方にする（自分が選べるかどうかとは別）
+        const claimed = D.claimedNames(state.nominations, state.settings.totalRounds);
+        const remaining = pool.filter(name => !claimed.has(D.normalizeName(name)));
         count.textContent = '残り ' + remaining.length + ' / ' + pool.length + ' 名';
 
         const matched = pool.filter(name => !poolFilter || D.normalizeName(name).indexOf(poolFilter) !== -1);

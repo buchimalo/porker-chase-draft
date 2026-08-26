@@ -372,6 +372,27 @@
         return map;
     }
 
+    /**
+     * 「残り選手」の表示に使う、いま押さえられている名前の一覧。
+     *
+     * takenPlayers は「確定した選手」だけを返す。回す前のルーレット枠は
+     * まだ誰を獲るか決まっていないので含まれないが、枠自体は押さえられて
+     * いるので、残り人数の表示ではこちらも数える。
+     */
+    function claimedNames(nominationsData, totalRounds) {
+        const map = takenPlayers(nominationsData, totalRounds);
+        for (let r = 1; r <= totalRounds; r++) {
+            const data = roundData(nominationsData, r);
+            Object.keys(data).forEach(teamId => {
+                const nom = data[teamId];
+                if (!isActive(nom) || !isRouletteWaiting(nom)) return;
+                const key = normalizeName(nom.playerName);
+                if (key && !map.has(key)) map.set(key, { name: nom.playerName, round: r, teamId: teamId });
+            });
+        }
+        return map;
+    }
+
     // 設定（存在しない場合はデフォルト）
     function readSettings(draftData) {
         const s = (draftData && draftData.settings) || {};
@@ -943,6 +964,7 @@
         hasPick,
         findConflicts,
         takenPlayers,
+        claimedNames,
         readSettings,
         isRevealed,
         isAllIn,

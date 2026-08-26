@@ -289,8 +289,8 @@
         const spare = (cols - (ordered.length % cols)) % cols;
         if (spare > 0) {
             const pool = D.playerPool({ players: state.players });
-            const taken = D.takenPlayers(state.nominations, state.settings.totalRounds);
-            const freeCount = pool.filter(p => !taken.has(D.normalizeName(p))).length;
+            const claimed = D.claimedNames(state.nominations, state.settings.totalRounds);
+            const freeCount = pool.filter(p => !claimed.has(D.normalizeName(p))).length;
 
             const summary = document.createElement('div');
             summary.className = 'pick-summary';
