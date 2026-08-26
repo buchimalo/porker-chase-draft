@@ -402,9 +402,15 @@ h5 {
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.05em;
-    color: var(--team-color, var(--paper));
-    opacity: .2;
+    color: var(--paper);
+    opacity: .07;
     pointer-events: none;
+}
+
+.pick-team .team-avatar {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
 }
 
 .pick-team {
@@ -2137,6 +2143,8 @@ table.tbl .team-cell {
     border-radius: 50%;
     object-fit: cover;
     background: var(--raised);
+    /* 監督のイメージカラーは、この枠だけが持つ */
+    border: 2px solid var(--team-color, var(--line-strong));
 }
 
 .team-avatar.is-inline {
@@ -2145,6 +2153,7 @@ table.tbl .team-cell {
     flex: 0 0 20px;
     margin-right: 8px;
     vertical-align: -5px;
+    border-width: 1px;
 }
 
 .sd-team .team-avatar {

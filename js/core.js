@@ -517,9 +517,9 @@
             return '<span class="pick-dot' + cls + '" style="--team-color:' +
                 (team && team.color ? team.color : 'currentColor') + '"></span>';
         }
+        const color = (team && team.color) ? team.color : 'transparent';
         return '<img class="team-avatar' + cls + '" src="' + esc(url) +
-            '" alt="" style="background:' +
-            (team && team.color ? team.color : 'transparent') + '">';
+            '" alt="" style="--team-color:' + color + ';background:' + color + '">';
     }
 
     /* ---------- トースト ---------- */
