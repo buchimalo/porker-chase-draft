@@ -225,7 +225,26 @@
         return D.takenPlayers(state.nominations, state.settings.totalRounds, { beforeRound: state.currentRound });
     }
 
-    // 今の巡で他チームが確定済みの選手
+    /**
+     * その巡の「提出フェーズ」番号。
+     * 0 = 最初の同時提出、1 = 1回目の再指名（1回抽選に負けた）、2 = 2回目 …
+     * 同じフェーズのチーム同士は被せられる（重複すればポーカー抽選）。
+     */
+    function phaseOf(nomination) {
+        if (!nomination) return 0;
+        const lost = (nomination.attempts && nomination.attempts.length) || 0;
+        return lost + (D.isLost(nomination) ? 1 : 0);
+    }
+
+    // これから自分が出す指名のフェーズ
+    function myPhase() {
+        const nom = myNomination();
+        // 進行役に指名を取り消された場合、その巡が一度完了していれば確定済みは全部ロックする
+        if (!nom) return D.isAllIn(state.settings, state.currentRound) ? Infinity : 0;
+        return phaseOf(nom);
+    }
+
+    // 今の巡で他チームが確定済みの選手 → { name: チーム名, phase: 提出フェーズ }
     function othersNow() {
         const map = new Map();
         if (state.settings.hidePicks && !D.isRevealed(state.settings, state.currentRound)) return map;
@@ -234,7 +253,10 @@
         Object.entries(round).forEach(([teamId, nom]) => {
             if (teamId === state.teamId || !D.isActive(nom)) return;
             const team = state.teams[teamId];
-            map.set(D.normalizeName(nom.playerName), (team && team.name) || teamId);
+            map.set(D.normalizeName(nom.playerName), {
+                name: (team && team.name) || teamId,
+                phase: phaseOf(nom)
+            });
         });
         return map;
     }
@@ -259,7 +281,7 @@
         return {
             taken: takenBefore(),
             others: othersNow(),
-            locking: D.isAllIn(state.settings, state.currentRound),
+            phase: myPhase(),
             used: used,
             nextSlot: rouletteSlots(pool).find(name => !used.has(D.normalizeName(name))) || null
         };
@@ -272,13 +294,16 @@
         const before = ctx.taken.get(key);
         if (before) return { text: before.round + '巡目で指名済' };
 
-        if (ctx.locking && ctx.others.has(key)) return { text: ctx.others.get(key) + ' が確定済' };
-
         // ルーレット枠は番号順に1つずつ。①を消費するまで②以降は選べない
         if (D.isRouletteName(name) && key !== D.normalizeName(ctx.nextSlot || '')) {
             if (ctx.used.has(key)) return { text: '使用済み' };
             return { text: ctx.nextSlot + ' の後に使えます', later: true };
         }
+
+        // 前のフェーズで確定した指名は取れない。
+        // 同じフェーズ（＝一緒に再指名している相手）には被せられる
+        const held = ctx.others.get(key);
+        if (held && held.phase < ctx.phase) return { text: held.name + ' が確定済' };
 
         return null;
     }
@@ -328,7 +353,7 @@
                 btn.innerHTML = D.esc(name) + '<span class="by">' + D.esc(locked.text) + '</span>';
             } else {
                 if (key === current) btn.classList.add('selected');
-                const rival = ctx.others.get(key);
+                const rival = ctx.others.get(key) && ctx.others.get(key).name;
                 const rl = D.isRouletteName(name);
                 if (rl) btn.classList.add('is-roulette-slot');
                 btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
@@ -358,11 +383,11 @@
             });
         }
 
-        const rival = othersNow().get(key);
-        if (rival) {
-            warnings.push(D.isAllIn(state.settings, state.currentRound)
-                ? { type: 'danger', text: 'この選手は今の巡で ' + rival + ' が確定済みです（指名できません）' }
-                : { type: 'warn', text: rival + ' が同じ選手を指名中です。このまま指名すると抽選になります' });
+        const held = othersNow().get(key);
+        if (held) {
+            warnings.push(held.phase < myPhase()
+                ? { type: 'danger', text: 'この選手は今の巡で ' + held.name + ' が確定済みです（指名できません）' }
+                : { type: 'warn', text: held.name + ' が同じ選手を指名中です。このまま指名すると抽選になります' });
         }
 
         const pool = D.playerPool({ players: state.players });
