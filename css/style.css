@@ -375,9 +375,36 @@ h5 {
     background: var(--obsidian);
 }
 
-/* 指名中は色ではなく明るさで一段持ち上げる */
+/* 指名中は、誰の番か遠目でも分かるよう点滅させる */
 .pick-card.is-turn {
     background: var(--obsidian);
+    animation: turn-blink 1.1s ease-in-out infinite;
+}
+
+@keyframes turn-blink {
+    0%,
+    100% {
+        background: var(--obsidian);
+        box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0);
+    }
+
+    50% {
+        background:
+            linear-gradient(rgba(var(--accent-rgb), .14), rgba(var(--accent-rgb), .14)),
+            var(--obsidian);
+        box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), .6);
+    }
+}
+
+/* 動きが苦手な人の設定を尊重する。点滅はやめて出しっぱなしにする */
+@media (prefers-reduced-motion: reduce) {
+    .pick-card.is-turn {
+        animation: none;
+        background:
+            linear-gradient(rgba(var(--accent-rgb), .14), rgba(var(--accent-rgb), .14)),
+            var(--obsidian);
+        box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), .6);
+    }
 }
 
 /* 重複だけ、うっすら赤を敷く */
