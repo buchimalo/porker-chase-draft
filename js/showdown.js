@@ -703,6 +703,24 @@
         return audioCtx;
     }
 
+    // 合成音の出口。スマホのスピーカーだと音源（mp3）に比べて埋もれるので
+    // まとめて持ち上げ、重なったときに割れないよう最後に圧縮をかける
+    const SYNTH_LEVEL = 2.2;
+    let synthOut = null;
+
+    function out() {
+        const ac = ctx();
+        if (!ac) return null;
+        if (!synthOut || synthOut.context !== ac) {
+            const gain = ac.createGain();
+            const comp = ac.createDynamicsCompressor();
+            gain.gain.value = SYNTH_LEVEL;
+            gain.connect(comp).connect(ac.destination);
+            synthOut = gain;
+        }
+        return synthOut;
+    }
+
     function tone(freq, duration, type, gain, delay) {
         const ac = ctx();
         if (!ac) return;
@@ -714,7 +732,7 @@
         amp.gain.setValueAtTime(0.0001, start);
         amp.gain.exponentialRampToValueAtTime(gain || 0.18, start + 0.012);
         amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-        osc.connect(amp).connect(ac.destination);
+        osc.connect(amp).connect(out() || ac.destination);
         osc.start(start);
         osc.stop(start + duration + 0.03);
     }
@@ -733,7 +751,7 @@
         const amp = ac.createGain();
         src.buffer = buffer;
         amp.gain.setValueAtTime(gain || 0.25, start);
-        src.connect(amp).connect(ac.destination);
+        src.connect(amp).connect(out() || ac.destination);
         src.start(start);
     }
 
@@ -904,6 +922,18 @@
         unlock() {
             const ac = ctx();
             if (ac && ac.state === 'suspended') ac.resume();
+
+            // iOS は resume() だけでは足りず、操作の中で実際に音を1つ
+            // 鳴らすまで合成音が出ない。長さ1サンプルの無音を鳴らしておく
+            if (ac) {
+                try {
+                    const buf = ac.createBuffer(1, 1, ac.sampleRate);
+                    const src = ac.createBufferSource();
+                    src.buffer = buf;
+                    src.connect(out() || ac.destination);
+                    src.start(0);
+                } catch (e) { /* 無視 */ }
+            }
 
             // スマホは、ユーザー操作の中で一度鳴らしていない音源の再生を拒否する。
             // 音量を落として一瞬だけ鳴らし、すぐ戻すことで許可を取っておく
