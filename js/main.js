@@ -197,7 +197,8 @@
         const open = revealed();
         let submitted = 0;
 
-        // 指名中のチーム＝順番が最も早い未指名チーム
+        // 指名中のチーム＝指名順で最も早い、まだ送っていないチーム。
+        // 送信すると次のチームへ移る（伏せている間も出す）
         let turnTeamId = null;
         for (const team of ordered) {
             if (!D.isActive(round[team.id])) { turnTeamId = team.id; break; }
@@ -217,7 +218,7 @@
             let playerHtml;
             let playerClass = 'pick-player';
             const tags = [];
-            const isTurn = open && team.id === turnTeamId;
+            const isTurn = team.id === turnTeamId;
 
             if (isTurn) {
                 card.classList.add('is-turn');
