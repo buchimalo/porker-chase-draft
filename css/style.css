@@ -2564,3 +2564,127 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
         text-align: center;
     }
 }
+
+/* ============================================================
+   選手一覧 / 結果一覧モーダル — 横幅を広げて全体を大きく
+   ============================================================ */
+
+@media (min-width: 900px) {
+
+    #playerListModal .modal-dialog,
+    #resultsModal .modal-dialog {
+        max-width: min(1600px, calc(100vw - 48px));
+    }
+
+    #playerListModal .modal-header,
+    #resultsModal .modal-header {
+        padding: 16px 24px;
+    }
+
+    #playerListModal .modal-body,
+    #resultsModal .modal-body {
+        padding: 24px;
+    }
+
+    #playerListModal .modal-title,
+    #resultsModal .modal-title {
+        font-size: 18px;
+    }
+
+    #playerListModal .modal-header .seg button,
+    #resultsModal .modal-header .seg button {
+        height: 30px;
+        padding: 0 16px;
+        font-size: 13px;
+    }
+
+    #resultsModal .modal-header .btn2-sm {
+        height: 30px;
+        padding: 0 13px;
+        font-size: 13px;
+    }
+
+    /* 選手一覧 */
+    #playerListModal .player-list {
+        grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+        gap: 8px;
+    }
+
+    #playerListModal .pl-item {
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    #playerListModal .pl-item::before {
+        width: 8px;
+        height: 8px;
+        flex-basis: 8px;
+    }
+
+    #playerListModal .pl-name {
+        font-size: 16px;
+    }
+
+    #playerListModal .pl-meta {
+        font-size: 13px;
+    }
+
+    #playerListModal .input {
+        padding: 13px 20px;
+        font-size: 15px;
+    }
+
+    #playerListModal .field-label {
+        font-size: 13px;
+    }
+
+    /* 結果一覧 — カード表示 */
+    #resultsModal .results-grid {
+        grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+        gap: 16px;
+    }
+
+    #resultsModal .team-card-head {
+        gap: 10px;
+        padding: 16px 18px;
+        font-size: 16px;
+    }
+
+    #resultsModal .team-card-head .team-avatar {
+        width: 32px;
+        height: 32px;
+        flex-basis: 32px;
+    }
+
+    #resultsModal .team-card-count {
+        font-size: 13px;
+    }
+
+    #resultsModal .team-picks li {
+        gap: 12px;
+        padding: 13px 18px;
+        font-size: 16px;
+    }
+
+    #resultsModal .team-picks .rd {
+        font-size: 13px;
+    }
+
+    /* 結果一覧 — 一覧表 */
+    #resultsModal table.tbl {
+        font-size: 16px;
+    }
+
+    #resultsModal table.tbl th {
+        padding: 0 16px 12px;
+        font-size: 13px;
+    }
+
+    #resultsModal table.tbl td {
+        padding: 13px 16px;
+    }
+
+    #resultsModal table.matrix th.team-head {
+        font-size: 15px;
+    }
+}
