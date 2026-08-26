@@ -976,6 +976,20 @@
         else done();
     }
 
+    // ルーレットの回転音。カチカチを1音ずつ鳴らすと序盤が 14ms 間隔になり、
+    // 端末が再生に追いつかない。減速まで含めて1本の音源にしてある
+    let spinEl = null;
+    let spinBroken = false;
+
+    function spinElement() {
+        if (spinEl || spinBroken) return spinEl;
+        if (typeof global.Audio === 'undefined') return null;
+        spinEl = new global.Audio(CLIP_DIR + 'roulette.mp3');
+        spinEl.preload = 'auto';
+        spinEl.addEventListener('error', () => { spinBroken = true; });
+        return spinEl;
+    }
+
     const sfx = {
         // 最初のクリックで音を有効化する（ブラウザの自動再生制限対策）
         unlock() {
@@ -984,6 +998,7 @@
                 if (pool) pool.els.forEach(primeElement);
             });
             primeElement(rollElement());
+            primeElement(spinElement());
 
             // 音源が読めなかったときのために、合成のほうも起こしておく
             const ac = ctx();
@@ -1007,6 +1022,23 @@
         },
         tense() { if (!playClip('tense')) tone(150, 0.5, 'sawtooth', 0.07); },
         countdown(step) { tone(440 + step * 110, 0.14, 'square', 0.13); },
+        // 鳴らせたら true。false のときだけ呼び出し側が1音ずつに切り替える
+        rouletteStart() {
+            const el = spinElement();
+            if (!el || spinBroken) return false;
+            try {
+                el.currentTime = 0;
+                const played = el.play();
+                if (played && played.catch) played.catch(() => { /* 無視 */ });
+            } catch (e) {
+                return false;
+            }
+            return true;
+        },
+        rouletteStop() {
+            if (!spinEl) return;
+            try { spinEl.pause(); spinEl.currentTime = 0; } catch (e) { /* 無視 */ }
+        },
         drumroll(seconds) { drumrollStart(seconds); },
         drumrollStop() { drumrollStop(); },
         drumrollAbort() { drumrollAbort(); },

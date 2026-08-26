@@ -109,9 +109,12 @@
         });
         wheel.dataset.rotation = String(next);
 
-        // 減速に合わせてカチカチ鳴らす
+        // 減速に合わせてカチカチ鳴らす。1音ずつだと序盤が詰まりすぎて
+        // 端末が追いつかないので、1本の音源で鳴らすのを本線にする
         const timers = [];
-        if (sfx && typeof sfx.flip === 'function') {
+        let track = false;
+        if (sfx && typeof sfx.rouletteStart === 'function') track = sfx.rouletteStart();
+        if (!track && sfx && typeof sfx.flip === 'function') {
             const total = Math.floor(delta / seg);
             const step = Math.max(1, Math.ceil(total / MAX_TICKS));
             for (let k = step; k <= total; k += step) {
@@ -125,6 +128,7 @@
         return new Promise(resolve => {
             setTimeout(() => {
                 timers.forEach(clearTimeout);
+                if (track && typeof sfx.rouletteStop === 'function') sfx.rouletteStop();
                 host.classList.remove('is-spinning');
                 host.classList.add('is-settled');
                 resolve();
