@@ -2816,3 +2816,47 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
         font-size: 15px;
     }
 }
+
+/* ============================================================
+   おまけ：Pのすけ事件
+   ============================================================ */
+
+/* 進行に関わらないボタンなので、普段は控えめに置いておく */
+.btn2-pnosuke {
+    color: var(--ash);
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.btn2-pnosuke:hover:not(:disabled) {
+    color: var(--accent);
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+#pnosukeModal .modal-dialog {
+    max-width: 400px;
+}
+
+#pnosukeModal .modal-body {
+    padding: 0 18px 18px;
+}
+
+/* ショート動画なので縦長で置く */
+.pnosuke-frame {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    max-height: 74vh;
+    margin: 0 auto;
+    border-radius: var(--r-md);
+    background: #000;
+    overflow: hidden;
+}
+
+.pnosuke-frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}

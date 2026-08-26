@@ -522,6 +522,35 @@
             '" alt="" style="--team-color:' + color + ';background:' + color + '">';
     }
 
+    /* ---------- おまけ：Pのすけ事件 ---------- */
+
+    // 押すと縦型のショート動画をポップアップで流す。閉じたら再生を止める。
+    const PNOSUKE_VIDEO = 'WfdxAixWUVU';
+
+    function setupPnosuke() {
+        const modal = document.getElementById('pnosukeModal');
+        const button = document.getElementById('btn-pnosuke');
+        const player = document.getElementById('pnosuke-player');
+        if (!modal || !button || !player) return;
+
+        button.addEventListener('click', () => {
+            player.src = 'https://www.youtube.com/embed/' + PNOSUKE_VIDEO +
+                '?autoplay=1&rel=0&playsinline=1';
+            new bootstrap.Modal(modal).show();
+        });
+
+        // 閉じ始めた時点で破棄する。hidden だと閉じるアニメーションの完了待ちに
+        // なるので、環境によっては音が鳴り続ける。
+        // 空文字を入れるとこのページ自身を読みにいくため、属性ごと外す
+        modal.addEventListener('hide.bs.modal', () => { player.removeAttribute('src'); });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupPnosuke);
+    } else {
+        setupPnosuke();
+    }
+
     /* ---------- トースト ---------- */
 
     let toastStack = null;
