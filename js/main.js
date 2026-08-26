@@ -1211,8 +1211,6 @@
         await wait(500);
 
         // --- 1〜4枚目 ---
-        // 演出上の「仮の勝者」。待ったがある場合は本当の勝者ではない
-        const stageWinner = packet.objection && packet.provisional ? packet.provisional : packet.winner;
         const openIdx = packet.hands.map((h, n) => n);
 
         for (let step = 1; step <= 4; step++) {
@@ -1259,33 +1257,34 @@
         Showdown.sfx.drumrollStop();
         await wait(400);
 
-        // 勝者を最後に残してめくる
-        const order = openIdx
-            .map(index => ({ hand: packet.hands[index], index }))
-            .sort((a, b) => (a.hand.team.id === stageWinner.id ? 1 : 0) - (b.hand.team.id === stageWinner.id ? 1 : 0));
+        // 全員同時にオープン。順番にめくると「最後の1人が勝つ」と分かってしまう
+        openIdx.forEach(index => rows[index].classList.add('is-opening'));
+        await wait(360);
 
-        for (const item of order) {
-            const row = rows[item.index];
+        let improved = false;
+        openIdx.forEach(index => {
+            const hand = packet.hands[index];
+            const row = rows[index];
             const slot = row.querySelectorAll('.pcard')[4];
-            const beforeCat = Showdown.evaluatePartial(item.hand.cards.slice(0, 4)).category;
+            const beforeCat = Showdown.evaluatePartial(hand.cards.slice(0, 4)).category;
 
-            row.classList.add('is-opening');
-            await wait(360);
-            slot.outerHTML = Showdown.cardHtml(item.hand.cards[4]);
+            slot.outerHTML = Showdown.cardHtml(hand.cards[4]);
             row.classList.remove('is-opening');
+            row.querySelector('.sd-hand').textContent = hand.result.name;
 
-            const result = item.hand.result;
-            row.querySelector('.sd-hand').textContent = result.name;
-
-            if (result.category > beforeCat) {
+            if (hand.result.category > beforeCat) {
+                improved = true;
                 row.classList.add('is-hit');
-                Showdown.sfx.made();
                 setTimeout(() => row.classList.remove('is-hit'), 700);
-            } else {
-                Showdown.sfx.flip();
             }
-            await wait(item === order[order.length - 1] ? 260 : 780);
-        }
+        });
+
+        // 人数ぶん重ねると濁るので、音は1回だけ
+        if (improved) Showdown.sfx.made();
+        else Showdown.sfx.flip();
+
+        // 役を読む間
+        await wait(1100);
 
         // --- ちょっとまったー！ ---
         if (packet.objection) {
@@ -1326,7 +1325,7 @@
             // 待った
             stage.classList.add('is-objection');
             banner.className = 'showdown-banner is-objection';
-            banner.textContent = '✋ ちょっとまったー！！';
+            banner.textContent = 'ちょっとまったー！！';
             note.textContent = '';
             Showdown.sfx.objection();
             rows.forEach(r => { r.classList.remove('is-winner'); r.classList.remove('is-out'); });
@@ -1337,7 +1336,7 @@
             const winHand = packet.hands[winIndex];
 
             winRow.classList.add('is-objector');
-            banner.textContent = '✋ ちょっとまったー！！　' + packet.winner.name;
+            banner.textContent = 'ちょっとまったー！！　' + packet.winner.name;
             await wait(1200);
 
             // 出していた札を引っ込めて、別の札を叩きつける
