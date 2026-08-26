@@ -531,8 +531,8 @@
     const PASS_CODE = '0416';
 
     function passGate() {
-        // 配信オーバーレイは人が操作しないので通す
-        if (param('obs') === '1') return;
+        // 配信オーバーレイと、視聴者に配る観戦モードは通す
+        if (param('obs') === '1' || param('view') === '1') return;
         try {
             if (localStorage.getItem(PASS_KEY) === PASS_CODE) return;
         } catch (e) {
