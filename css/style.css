@@ -380,7 +380,7 @@ h5 {
    内側いっぱいに広げた影で面を塗る（文字より下に描かれるので字はくすまない） */
 .pick-card.is-turn {
     background: var(--obsidian);
-    animation: turn-blink 2.4s cubic-bezier(.45, 0, .55, 1) infinite;
+    animation: turn-blink 1.8s cubic-bezier(.45, 0, .55, 1) infinite;
 }
 
 @keyframes turn-blink {
