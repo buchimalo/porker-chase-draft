@@ -619,22 +619,38 @@
             stage.classList.remove('is-settled');
             note.textContent = '';
             global.Roulette.render(stage, live.items);
-            new global.bootstrap.Modal(modalEl).show();
 
             const se = (liveSoundOn() && global.Showdown) ? global.Showdown.sfx : null;
-            if (se) se.tense();
-            global.Roulette.spin(stage, live.items, live.winnerIndex, { sfx: se })
-                .then(() => {
-                    const name = live.items[live.winnerIndex];
-                    global.Roulette.highlight(stage, live.items, live.winnerIndex);
-                    banner.textContent = name;
-                    banner.classList.add('show');
-                    note.textContent = live.teamName + ' が「' + name + '」を獲得';
-                    if (se) se.win();
-                    if (global.Showdown) global.Showdown.confetti(stage, 2600);
-                })
-                .catch(err => console.error(err))
-                .then(() => { playing = false; });
+
+            function startSpin() {
+                if (se) se.tense();
+                global.Roulette.spin(stage, live.items, live.winnerIndex, { sfx: se })
+                    .then(() => {
+                        const name = live.items[live.winnerIndex];
+                        global.Roulette.highlight(stage, live.items, live.winnerIndex);
+                        banner.textContent = name;
+                        banner.classList.add('show');
+                        note.textContent = live.teamName + ' が「' + name + '」を獲得';
+                        if (se) se.win();
+                        if (global.Showdown) global.Showdown.confetti(stage, 2600);
+                    })
+                    .catch(err => console.error(err))
+                    .then(() => { playing = false; });
+            }
+
+            // 開ききる前に回すと回転のトランジションが効かず、針だけが小刻みに動く。
+            // show クラスは show() を呼んだ時点で付くので、判定は呼ぶ前に取る
+            const alreadyOpen = modalEl.classList.contains('show');
+            if (alreadyOpen) {
+                startSpin();
+            } else {
+                const once = () => {
+                    modalEl.removeEventListener('shown.bs.modal', once);
+                    startSpin();
+                };
+                modalEl.addEventListener('shown.bs.modal', once);
+            }
+            new global.bootstrap.Modal(modalEl).show();
         }, error => console.error('ルーレットの受信に失敗:', error));
     }
 

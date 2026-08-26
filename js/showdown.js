@@ -863,6 +863,23 @@
         unlock() {
             const ac = ctx();
             if (ac && ac.state === 'suspended') ac.resume();
+
+            // スマホは、ユーザー操作の中で一度鳴らしていない音源の再生を拒否する。
+            // 音量を落として一瞬だけ鳴らし、すぐ戻すことで許可を取っておく
+            const el = rollElement();
+            if (el && el.paused) {
+                const volume = el.volume;
+                el.volume = 0;
+                const done = () => {
+                    el.pause();
+                    el.currentTime = 0;
+                    el.volume = volume;
+                };
+                let played = null;
+                try { played = el.play(); } catch (e) { /* 無視 */ }
+                if (played && played.then) played.then(done).catch(() => { el.volume = volume; });
+                else done();
+            }
         },
         deal() { noise(0.06, 0.12); },
         flip() { tone(660, 0.06, 'square', 0.07); },
