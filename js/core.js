@@ -386,14 +386,36 @@
         return !!settings.allIn['round' + round];
     }
 
-    // 選手プール（textarea 保存形式）を配列に
+    /**
+     * 50音順に並べるための比較キー。
+     * 半角カナ・全角英数を正規化し、カタカナをひらがなに寄せて大文字小文字を無視する。
+     */
+    function kanaKey(name) {
+        const src = String(name || '').normalize('NFKC').toLowerCase();
+        let out = '';
+        for (let i = 0; i < src.length; i++) {
+            const code = src.charCodeAt(i);
+            // カタカナ（ァ〜ヶ）はひらがなに寄せる
+            out += (code >= 0x30a1 && code <= 0x30f6)
+                ? String.fromCharCode(code - 0x60)
+                : src.charAt(i);
+        }
+        return out;
+    }
+
+    // 登録選手を50音順に並べる
+    function sortPlayers(list) {
+        return list.slice().sort((a, b) => kanaKey(a).localeCompare(kanaKey(b), 'ja'));
+    }
+
+    // 選手プール（textarea 保存形式）を配列に。表示は常に50音順
     function playerPool(draftData) {
         const raw = (draftData && draftData.players) || '';
         if (!raw) return [];
-        return String(raw)
+        return sortPlayers(String(raw)
             .split('\n')
             .map(s => s.trim())
-            .filter(Boolean);
+            .filter(Boolean));
     }
 
     /* ---------- ルーレット抽選 ---------- */
@@ -683,6 +705,7 @@
         isRevealed,
         isAllIn,
         playerPool,
+        sortPlayers,
         roulettePool,
         rouletteAvailable,
         isRoulette,
