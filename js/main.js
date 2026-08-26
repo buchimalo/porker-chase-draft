@@ -490,7 +490,8 @@
         const spinBtn = document.getElementById('btn-roulette-spin');
         const sfx = window.Showdown && window.Showdown.sfx;
 
-        if (sfx) { sfx.unlock(); sfx.tense(); }
+        // tense は回転音に同梱してある（同時に鳴らすと端末で落ちる）
+        if (sfx) sfx.unlock();
         publishRoulette(rouletteCtx);
         spinBtn.disabled = true;
         spinBtn.textContent = '回転中…';

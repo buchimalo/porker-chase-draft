@@ -644,7 +644,7 @@
             const se = (liveSoundOn() && global.Showdown) ? global.Showdown.sfx : null;
 
             function startSpin() {
-                if (se) se.tense();
+                // tense は回転音に同梱してある（同時に鳴らすと端末で落ちる）
                 global.Roulette.spin(stage, live.items, live.winnerIndex, { sfx: se })
                     .then(() => {
                         const name = live.items[live.winnerIndex];

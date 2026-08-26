@@ -941,6 +941,8 @@
             const el = new global.Audio(CLIP_DIR + name + '.mp3');
             el.preload = 'auto';
             el.addEventListener('error', () => { pool.broken = true; });
+            // preload は端末によっては無視されるので、読み込みを明示しておく
+            try { el.load(); } catch (e) { /* 無視 */ }
             pool.els.push(el);
         }
         clips[name] = pool;
@@ -953,8 +955,10 @@
         if (!pool || pool.broken) return false;
         const el = pool.els[pool.at];
         pool.at = (pool.at + 1) % pool.els.length;
+        // 読み込みが済んでいないと頭出しが失敗する端末がある。
+        // 再生そのものを巻き添えにしないよう、別々に囲う
+        try { if (el.currentTime) el.currentTime = 0; } catch (e) { /* 無視 */ }
         try {
-            el.currentTime = 0;
             const played = el.play();
             if (played && played.catch) played.catch(() => { /* 無視 */ });
         } catch (e) {
@@ -977,7 +981,9 @@
     }
 
     // ルーレットの回転音。カチカチを1音ずつ鳴らすと序盤が 14ms 間隔になり、
-    // 端末が再生に追いつかない。減速まで含めて1本の音源にしてある
+    // 端末が再生に追いつかない。減速まで含めて1本の音源にしてある。
+    // 頭の緊張感の音（tense）も同梱してある。別々の要素で同時に鳴らすと
+    // 端末によっては後のほうが落ちるため
     let spinEl = null;
     let spinBroken = false;
 
@@ -987,6 +993,7 @@
         spinEl = new global.Audio(CLIP_DIR + 'roulette.mp3');
         spinEl.preload = 'auto';
         spinEl.addEventListener('error', () => { spinBroken = true; });
+        try { spinEl.load(); } catch (e) { /* 無視 */ }
         return spinEl;
     }
 
@@ -1026,8 +1033,8 @@
         rouletteStart() {
             const el = spinElement();
             if (!el || spinBroken) return false;
+            try { if (el.currentTime) el.currentTime = 0; } catch (e) { /* 無視 */ }
             try {
-                el.currentTime = 0;
                 const played = el.play();
                 if (played && played.catch) played.catch(() => { /* 無視 */ });
             } catch (e) {
