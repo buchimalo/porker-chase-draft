@@ -700,45 +700,147 @@
     // 途中で止めたいときは source を止めるだけで済む。
     let rollNode = null;
 
-    function drumrollStart(seconds) {
+    function synthRollStart(seconds) {
         const ac = ctx();
         if (!ac) return;
-        drumrollStop();
+        synthRollStop();
 
         const dur = Math.max(0.5, seconds || 3);
-        const frames = Math.floor(ac.sampleRate * dur);
-        const buffer = ac.createBuffer(1, frames, ac.sampleRate);
-        const data = buffer.getChannelData(0);
+        const rate = ac.sampleRate;
+        const frames = Math.floor(rate * dur);
 
-        // 打点を並べる。終盤にかけて間隔を詰めながら音量を上げる
+        // スネアは「響き線のシャー」と「胴のドン」の二層でできている。
+        // 帯域が違うので別のバッファに書いて、それぞれ違うフィルタを通す。
+        const wireBuf = ac.createBuffer(1, frames, rate);
+        const bodyBuf = ac.createBuffer(1, frames, rate);
+        const wire = wireBuf.getChannelData(0);
+        const body = bodyBuf.getChannelData(0);
+
         let at = 0;
-        let interval = 0.055;
+        let interval = 0.024;          // 打点の間隔。1秒あたり40打から始める
         while (at < dur) {
-            const head = Math.floor(at * ac.sampleRate);
-            const len = Math.floor(ac.sampleRate * 0.028);
-            const swell = 0.35 + 0.65 * (at / dur);
-            for (let i = 0; i < len && head + i < frames; i++) {
-                const env = Math.pow(1 - i / len, 2.2);
-                data[head + i] += (Math.random() * 2 - 1) * env * swell;
+            const head = Math.floor(at * rate);
+            const swell = 0.30 + 0.70 * (at / dur);
+            const accent = 0.75 + Math.random() * 0.5;   // 打点ごとに強弱を散らす
+            const level = swell * accent;
+
+            // 響き線。減衰を間隔より長く取ることで打点どうしが溶けて連続音になる
+            const wireLen = Math.floor(rate * 0.055);
+            for (let i = 0; i < wireLen && head + i < frames; i++) {
+                wire[head + i] += (Math.random() * 2 - 1) *
+                    Math.exp(-i / (rate * 0.014)) * level;
             }
-            at += interval;
-            interval = Math.max(0.024, interval * 0.986);
+
+            // 胴の鳴り。芯を出すための低い成分
+            const bodyLen = Math.floor(rate * 0.030);
+            for (let i = 0; i < bodyLen && head + i < frames; i++) {
+                const t = i / rate;
+                body[head + i] += Math.sin(2 * Math.PI * 188 * t) *
+                    Math.exp(-t / 0.010) * level * 0.6;
+            }
+
+            // 等間隔だと機械的になるので、少し揺らしながら詰めていく
+            at += interval * (0.85 + Math.random() * 0.3);
+            interval = Math.max(0.012, interval * 0.995);
         }
 
-        const src = ac.createBufferSource();
-        const band = ac.createBiquadFilter();
-        const amp = ac.createGain();
-        src.buffer = buffer;
-        band.type = 'bandpass';
-        band.frequency.value = 2100;   // スネアらしい帯域に寄せる
-        band.Q.value = 0.7;
-        amp.gain.setValueAtTime(0.16, ac.currentTime);
-        src.connect(band).connect(amp).connect(ac.destination);
-        src.start();
-        rollNode = { src: src, amp: amp };
+        normalize(wire, 0.9);
+        normalize(body, 0.9);
+
+        const master = ac.createGain();
+        master.gain.setValueAtTime(0.34, ac.currentTime);
+        master.connect(ac.destination);
+
+        const wireSrc = ac.createBufferSource();
+        const wireBand = ac.createBiquadFilter();
+        const wireAmp = ac.createGain();
+        wireSrc.buffer = wireBuf;
+        wireBand.type = 'bandpass';
+        wireBand.frequency.value = 3400;   // 響き線のざらつきはこのあたり
+        wireBand.Q.value = 0.45;
+        wireAmp.gain.value = 0.5;
+        wireSrc.connect(wireBand).connect(wireAmp).connect(master);
+
+        const bodySrc = ac.createBufferSource();
+        const bodyLow = ac.createBiquadFilter();
+        const bodyAmp = ac.createGain();
+        bodySrc.buffer = bodyBuf;
+        bodyLow.type = 'lowpass';
+        bodyLow.frequency.value = 420;
+        bodyAmp.gain.value = 0.42;
+        bodySrc.connect(bodyLow).connect(bodyAmp).connect(master);
+
+        wireSrc.start();
+        bodySrc.start();
+        rollNode = { sources: [wireSrc, bodySrc], amp: master };
     }
 
+    /**
+     * ドラムロールは音源ファイルを鳴らす。
+     * 末尾のクラッシュが「オープン！」に重なるよう、あらかじめ頭を
+     * 切り詰めてある（クラッシュは 2.70 秒地点 ≒ カウントダウンの長さ）。
+     * 読み込めなかったときだけ合成音に落とす。
+     */
+    const ROLL_URL = 'sounds/drumroll.mp3';
+    let rollAudio = null;      // null=未作成 / false=使えない
+
+    function rollElement() {
+        if (rollAudio !== null) return rollAudio;
+        try {
+            rollAudio = new Audio(ROLL_URL);
+            rollAudio.preload = 'auto';
+            rollAudio.volume = 0.75;
+            rollAudio.load();
+        } catch (e) {
+            rollAudio = false;
+        }
+        return rollAudio;
+    }
+
+    function drumrollStart(seconds) {
+        const el = rollElement();
+        if (el) {
+            try {
+                el.currentTime = 0;
+                const played = el.play();
+                if (played && played.catch) {
+                    played.catch(() => synthRollStart(seconds));
+                }
+                return;
+            } catch (e) { /* 合成音へ */ }
+        }
+        synthRollStart(seconds);
+    }
+
+    // 「オープン！」の合図。音源には決着のクラッシュが入っているので鳴らし切る
     function drumrollStop() {
+        synthRollStop();
+    }
+
+    // 抽選を途中でやめたときなど、完全に止める
+    function drumrollAbort() {
+        synthRollStop();
+        if (rollAudio) {
+            try { rollAudio.pause(); rollAudio.currentTime = 0; } catch (e) { /* 無視 */ }
+        }
+    }
+
+    // 本番で待たされないよう、読み込みだけ先に済ませておく
+    rollElement();
+
+    // 打点が重なって振り切れるので、書き終えてから全体を揃える
+    function normalize(data, target) {
+        let peak = 0;
+        for (let i = 0; i < data.length; i++) {
+            const a = Math.abs(data[i]);
+            if (a > peak) peak = a;
+        }
+        if (peak <= 0) return;
+        const scale = target / peak;
+        for (let i = 0; i < data.length; i++) data[i] *= scale;
+    }
+
+    function synthRollStop() {
         const node = rollNode;
         if (!node) return;
         rollNode = null;
@@ -751,7 +853,9 @@
             node.amp.gain.setValueAtTime(node.amp.gain.value, now);
             node.amp.gain.linearRampToValueAtTime(0.0001, now + 0.06);
         } catch (e) { /* 無視 */ }
-        try { node.src.stop(now + 0.09); } catch (e) { /* 無視 */ }
+        node.sources.forEach(src => {
+            try { src.stop(now + 0.09); } catch (e) { /* 無視 */ }
+        });
     }
 
     const sfx = {
@@ -767,6 +871,7 @@
         countdown(step) { tone(440 + step * 110, 0.14, 'square', 0.13); },
         drumroll(seconds) { drumrollStart(seconds); },
         drumrollStop() { drumrollStop(); },
+        drumrollAbort() { drumrollAbort(); },
         win() {
             [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.32, 'triangle', 0.16, i * 0.09));
         },

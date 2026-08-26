@@ -70,6 +70,14 @@
         on('btn-add-team', addTeamRow);
         on('btn-save-teams', saveTeams);
         on('btn-copy-urls', copyAllTeamSheetUrls);
+
+        // 抽選を途中で閉じたらドラムロールも止める
+        const lotteryModal = document.getElementById('lotteryModal');
+        if (lotteryModal) {
+            lotteryModal.addEventListener('hide.bs.modal', () => {
+                if (window.Showdown && Showdown.sfx.drumrollAbort) Showdown.sfx.drumrollAbort();
+            });
+        }
         on('btn-add-player', addPlayer);
         on('btn-add-roulette-slot', addRouletteSlot);
         on('btn-toggle-bulk', toggleBulk);
@@ -1172,7 +1180,7 @@
         applyBtn.disabled = true;
         banner.className = 'showdown-banner';
         banner.textContent = '';
-        stage.classList.remove('is-flash');
+        stage.classList.remove('is-flash', 'is-shake', 'is-rolling');
 
         const packet = Showdown.deal(lotteryCtx.teams, { dramaChance: 0.35 });
         lotteryCtx.winner = packet.winner;
@@ -1231,17 +1239,23 @@
         banner.className = 'showdown-banner is-countdown';
         banner.textContent = '運命の5枚目';
         note.textContent = '';
-        // 「運命の5枚目」から「オープン！」までの 2.76 秒にドラムロールを重ねる
+        // 周囲を落として5枚目の枠に目を集める。音は 2.76 秒後にクラッシュが来る
+        stage.classList.add('is-rolling');
         Showdown.sfx.drumroll(2.9);
         await wait(900);
 
+        // 数字ごとの電子音はドラムロールとぶつかるので鳴らさない
         for (let n = 3; n >= 1; n--) {
-            banner.className = 'showdown-banner is-countdown';
+            banner.className = 'showdown-banner is-countdown is-digit';
             banner.textContent = String(n);
-            Showdown.sfx.countdown(4 - n);
             await wait(620);
         }
+
+        banner.className = 'showdown-banner is-open';
         banner.textContent = 'オープン！';
+        stage.classList.remove('is-rolling');
+        stage.classList.add('is-flash', 'is-shake');
+        setTimeout(() => stage.classList.remove('is-flash', 'is-shake'), 500);
         Showdown.sfx.drumrollStop();
         await wait(400);
 
