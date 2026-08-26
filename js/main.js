@@ -76,6 +76,7 @@
         if (lotteryModal) {
             lotteryModal.addEventListener('hide.bs.modal', () => {
                 if (window.Showdown && Showdown.sfx.drumrollAbort) Showdown.sfx.drumrollAbort();
+                clearShowdown();
             });
         }
         on('btn-add-player', addPlayer);
@@ -1158,6 +1159,29 @@
 
     const wait = ms => new Promise(r => setTimeout(r, ms));
 
+    /**
+     * 配牌を全画面へ共有する。指名シートと観戦モードは、これを受け取って
+     * 同じ演出を再生する。
+     *
+     * draft/ の外（トップレベルの live/）に置いているのは、各画面が
+     * draft を丸ごと購読しているため。中に入れると、指名が1つ入るたびに
+     * 配牌まで全員へ再送されてしまう。
+     */
+    function publishShowdown(packet) {
+        if (!lotteryCtx || !D.isAdmin()) return;
+        db.ref('live/showdown').set({
+            id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+            player: lotteryCtx.player,
+            packet: JSON.parse(JSON.stringify(packet))
+        }).catch(() => { /* 共有に失敗しても進行は止めない */ });
+    }
+
+    // 抽選が終わった／やめたら、各画面のモーダルも閉じさせる
+    function clearShowdown() {
+        if (!D.isAdmin()) return;
+        db.ref('live/showdown').remove().catch(() => { /* 無視 */ });
+    }
+
     function spinLottery() {
         if (!lotteryCtx || lotteryCtx.running) return;
         lotteryCtx.running = true;
@@ -1184,6 +1208,7 @@
         const packet = Showdown.deal(lotteryCtx.teams, { dramaChance: 0.35 });
         lotteryCtx.winner = packet.winner;
         lotteryCtx.packet = packet;
+        publishShowdown(packet);
 
         await Showdown.play(packet, els, { sound: true });
 
@@ -1195,6 +1220,7 @@
 
     function applyLottery() {
         if (!lotteryCtx || !lotteryCtx.winner) return;
+        clearShowdown();
 
         const updates = {};
         const losers = [];
