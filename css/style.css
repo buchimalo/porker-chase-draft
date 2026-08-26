@@ -408,9 +408,9 @@ h5 {
 }
 
 .pick-team .team-avatar {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
 }
 
 .pick-team {
@@ -2144,7 +2144,7 @@ table.tbl .team-cell {
     object-fit: cover;
     background: var(--raised);
     /* 監督のイメージカラーは、この枠だけが持つ */
-    border: 2px solid var(--team-color, var(--line-strong));
+    border: 1px solid var(--team-color, var(--line-strong));
 }
 
 .team-avatar.is-inline {
