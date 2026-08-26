@@ -522,6 +522,54 @@
             '" alt="" style="--team-color:' + color + ';background:' + color + '">';
     }
 
+    /* ---------- 端末ごとの合言葉 ---------- */
+
+    // URL が出回っても、知らない人がそのまま開けないようにするための簡易的な鍵。
+    // 合言葉はこのファイルに書いてあるので、本気で調べる人は突破できる。
+    // データそのものの保護は Firebase のセキュリティルールで行うこと。
+    const PASS_KEY = 'pcd.pass';
+    const PASS_CODE = '0416';
+
+    function passGate() {
+        // 配信オーバーレイは人が操作しないので通す
+        if (param('obs') === '1') return;
+        try {
+            if (localStorage.getItem(PASS_KEY) === PASS_CODE) return;
+        } catch (e) {
+            return;   // localStorage が使えない環境では止めない
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'pass-gate';
+        wrap.innerHTML =
+            '<form class="pass-box">' +
+            '<p class="pass-title">ポカチェ ドラフト会議</p>' +
+            '<p class="pass-lead">この端末では初回だけ合言葉が必要です</p>' +
+            '<input type="password" class="input pass-input" inputmode="numeric" ' +
+            'autocomplete="off" placeholder="合言葉" aria-label="合言葉">' +
+            '<p class="pass-error" role="alert"></p>' +
+            '<button type="submit" class="btn2 btn2-gold btn2-lg pass-submit">開く</button>' +
+            '</form>';
+        document.body.appendChild(wrap);
+
+        const form = wrap.querySelector('form');
+        const input = wrap.querySelector('input');
+        const error = wrap.querySelector('.pass-error');
+        input.focus();
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            if (input.value.trim() !== PASS_CODE) {
+                error.textContent = '合言葉が違います';
+                input.value = '';
+                input.focus();
+                return;
+            }
+            try { localStorage.setItem(PASS_KEY, PASS_CODE); } catch (err) { /* 無視 */ }
+            wrap.remove();
+        });
+    }
+
     /* ---------- おまけ：Pのすけ事件 ---------- */
 
     // 押すと縦型のショート動画をポップアップで流す。閉じたら再生を止める。
@@ -545,10 +593,15 @@
         modal.addEventListener('hide.bs.modal', () => { player.removeAttribute('src'); });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupPnosuke);
-    } else {
+    function bootExtras() {
+        passGate();
         setupPnosuke();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootExtras);
+    } else {
+        bootExtras();
     }
 
     /* ---------- トースト ---------- */
