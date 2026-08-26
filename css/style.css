@@ -194,9 +194,10 @@ h5 {
     justify-content: center;
     gap: 6px;
     height: 32px;
-    /* 箱の高さと同じにすると文字が正確に縦中央へ来る */
+    /* 箱の高さと同じにして行ボックスを中央へ。
+       そのうえで、書体の輪郭が 1px 上に寄るぶんを上のパディングで打ち消す */
     line-height: 32px;
-    padding: 0 16px;
+    padding: 2px 16px 0;
     border-radius: var(--r-pill);
     border: none;
     background: var(--obsidian);
@@ -255,14 +256,14 @@ h5 {
 .btn2-lg {
     height: 40px;
     line-height: 39px;
-    padding: 0 22px;
+    padding: 2px 22px 0;
     font-size: 14px;
 }
 
 .btn2-sm {
     height: 26px;
     line-height: 26px;
-    padding: 0 9px;
+    padding: 2px 9px 0;
     font-size: 12px;
 }
 
@@ -493,9 +494,9 @@ h5 {
     display: inline-flex;
     align-items: center;
     height: 20px;
-    /* 箱の高さと同じにすると文字が正確に縦中央へ来る */
+    /* 箱の高さと同じにして行ボックスを中央へ。輪郭のズレは上のパディングで打ち消す */
     line-height: 20px;
-    padding: 0 8px;
+    padding: 1px 8px 0;
     border-radius: 1px;
     border: none;
     background: var(--line-strong);
@@ -1260,7 +1261,7 @@ table.matrix td.empty {
     appearance: none;
     height: 32px;
     line-height: 1;
-    padding: 1px 15px 0;
+    padding: 0 15px 2px;
     border-radius: var(--r-pill);
     border: none;
     background: var(--obsidian);
@@ -1665,7 +1666,7 @@ table.matrix td.empty {
 .seg button {
     appearance: none;
     height: 24px;
-    padding: 0 13px;
+    padding: 0 13px 2px;
     border: none;
     border-radius: var(--r-pill);
     background: transparent;
@@ -2721,14 +2722,14 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
     #resultsModal .modal-header .seg button {
         height: 30px;
         line-height: 30px;
-        padding: 0 16px;
+        padding: 0 16px 2px;
         font-size: 13px;
     }
 
     #resultsModal .modal-header .btn2-sm {
         height: 30px;
         line-height: 30px;
-        padding: 0 13px;
+        padding: 2px 13px 0;
         font-size: 13px;
     }
 
