@@ -21,79 +21,6 @@
     let pendingConfirmName = '';
     let lastRound = null;
 
-    /* ---------- 抽選の観戦 ---------- */
-
-    // 進行役が配った札を受け取って、ボードと同じ演出を流す。
-    // 音は既定でオン。切りたい人だけボタンで止められる。
-    const SOUND_KEY = 'pcd.livesound';
-    let liveId = null;
-    let livePlaying = false;
-
-    function liveSoundOn() {
-        try { return localStorage.getItem(SOUND_KEY) !== '0'; } catch (e) { return true; }
-    }
-
-    // ブラウザは、一度も触っていないページでの再生を止める。
-    // 最初の操作で解除しておかないと、抽選が無音になる
-    function unlockSoundOnFirstTouch() {
-        const once = () => {
-            if (window.Showdown) Showdown.sfx.unlock();
-            document.removeEventListener('pointerdown', once);
-            document.removeEventListener('keydown', once);
-        };
-        document.addEventListener('pointerdown', once);
-        document.addEventListener('keydown', once);
-    }
-
-    function setupLiveSoundButton() {
-        const btn = document.getElementById('btn-live-sound');
-        if (!btn) return;
-        const paint = () => { btn.textContent = liveSoundOn() ? '音を止める' : '音を出す'; };
-        paint();
-        btn.addEventListener('click', () => {
-            const next = liveSoundOn() ? '0' : '1';
-            try { localStorage.setItem(SOUND_KEY, next); } catch (e) { /* 無視 */ }
-            if (next === '1' && window.Showdown) Showdown.sfx.unlock();
-            paint();
-        });
-    }
-
-    function watchLiveShowdown() {
-        const modalEl = document.getElementById('lotteryModal');
-        if (!modalEl || !window.Showdown) return;
-
-        db.ref('live/showdown').on('value', snapshot => {
-            const live = snapshot.val();
-
-            // 進行役が閉じた／確定した
-            if (!live || !live.packet) {
-                liveId = null;
-                const inst = bootstrap.Modal.getInstance(modalEl);
-                if (inst) inst.hide();
-                if (Showdown.sfx.drumrollAbort) Showdown.sfx.drumrollAbort();
-                return;
-            }
-
-            if (live.id === liveId || livePlaying) return;
-            liveId = live.id;
-            livePlaying = true;
-
-            document.getElementById('lottery-player').textContent = live.player || '';
-            new bootstrap.Modal(modalEl).show();
-
-            Showdown.play(live.packet, {
-                stage: modalEl.querySelector('.lottery-stage'),
-                board: document.getElementById('showdown'),
-                banner: document.getElementById('showdown-banner'),
-                note: document.getElementById('lottery-note')
-            }, { sound: liveSoundOn() })
-                .catch(err => console.error(err))
-                .then(() => { livePlaying = false; });
-        }, error => {
-            console.error('抽選の受信に失敗:', error);
-        });
-    }
-
     /* ---------- 初期化 ---------- */
 
     function init() {
@@ -102,9 +29,7 @@
         state.fromUrl = !!urlTeam;
         state.teamId = urlTeam || safeStorageGet(STORAGE_KEY);
         bindEvents();
-        unlockSoundOnFirstTouch();
-        setupLiveSoundButton();
-        watchLiveShowdown();
+        D.watchLive();
 
         db.ref('draft').on('value', snapshot => {
             const data = snapshot.val() || {};

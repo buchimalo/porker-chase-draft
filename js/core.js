@@ -522,6 +522,130 @@
             '" alt="" style="--team-color:' + color + ';background:' + color + '">';
     }
 
+    /* ---------- 抽選の観戦（指名シート・観戦モードのボード） ---------- */
+
+    const LIVE_SOUND_KEY = 'pcd.livesound';
+
+    function liveSoundOn() {
+        try { return localStorage.getItem(LIVE_SOUND_KEY) !== '0'; } catch (e) { return true; }
+    }
+
+    // ブラウザは一度も触っていないページでの再生を止める。
+    // 最初の操作で解除しておかないと、抽選が無音になる
+    function unlockSoundOnFirstTouch() {
+        const once = () => {
+            if (global.Showdown) global.Showdown.sfx.unlock();
+            document.removeEventListener('pointerdown', once);
+            document.removeEventListener('keydown', once);
+        };
+        document.addEventListener('pointerdown', once);
+        document.addEventListener('keydown', once);
+    }
+
+    function setupLiveSoundButton() {
+        const btn = document.getElementById('btn-live-sound');
+        if (!btn) return;
+        const paint = () => { btn.textContent = liveSoundOn() ? '音を止める' : '音を出す'; };
+        paint();
+        btn.addEventListener('click', () => {
+            try { localStorage.setItem(LIVE_SOUND_KEY, liveSoundOn() ? '0' : '1'); } catch (e) { /* 無視 */ }
+            if (liveSoundOn() && global.Showdown) global.Showdown.sfx.unlock();
+            paint();
+        });
+    }
+
+    function hideModal(el) {
+        const inst = global.bootstrap && global.bootstrap.Modal.getInstance(el);
+        if (inst) inst.hide();
+    }
+
+    function watchLiveShowdown() {
+        const modalEl = document.getElementById('lotteryModal');
+        if (!modalEl || !global.Showdown) return;
+        let lastId = null;
+        let playing = false;
+
+        db.ref('live/showdown').on('value', snap => {
+            const live = snap.val();
+            if (!live || !live.packet) {
+                lastId = null;
+                hideModal(modalEl);
+                if (global.Showdown.sfx.drumrollAbort) global.Showdown.sfx.drumrollAbort();
+                return;
+            }
+            if (live.id === lastId || playing) return;
+            lastId = live.id;
+            playing = true;
+
+            const target = document.getElementById('lottery-player');
+            if (target) target.textContent = live.player || '';
+            new global.bootstrap.Modal(modalEl).show();
+
+            global.Showdown.play(live.packet, {
+                stage: modalEl.querySelector('.lottery-stage'),
+                board: document.getElementById('showdown'),
+                banner: document.getElementById('showdown-banner'),
+                note: document.getElementById('lottery-note')
+            }, { sound: liveSoundOn() })
+                .catch(err => console.error(err))
+                .then(() => { playing = false; });
+        }, error => console.error('抽選の受信に失敗:', error));
+    }
+
+    function watchLiveRoulette() {
+        const modalEl = document.getElementById('rouletteModal');
+        if (!modalEl || !global.Roulette) return;
+        let lastId = null;
+        let playing = false;
+
+        db.ref('live/roulette').on('value', snap => {
+            const live = snap.val();
+            if (!live || !live.items) {
+                lastId = null;
+                hideModal(modalEl);
+                return;
+            }
+            if (live.id === lastId || playing) return;
+            lastId = live.id;
+            playing = true;
+
+            const stage = document.getElementById('roulette-stage');
+            const banner = document.getElementById('roulette-banner');
+            const note = document.getElementById('roulette-note');
+            const teamEl = document.getElementById('roulette-team');
+            if (teamEl) teamEl.textContent = live.teamName + '（' + live.slot + '）';
+            banner.textContent = '';
+            banner.classList.remove('show');
+            stage.classList.remove('is-settled');
+            note.textContent = '';
+            global.Roulette.render(stage, live.items);
+            new global.bootstrap.Modal(modalEl).show();
+
+            const se = (liveSoundOn() && global.Showdown) ? global.Showdown.sfx : null;
+            if (se) se.tense();
+            global.Roulette.spin(stage, live.items, live.winnerIndex, { sfx: se })
+                .then(() => {
+                    const name = live.items[live.winnerIndex];
+                    global.Roulette.highlight(stage, live.items, live.winnerIndex);
+                    banner.textContent = name;
+                    banner.classList.add('show');
+                    note.textContent = live.teamName + ' が「' + name + '」を獲得';
+                    if (se) se.win();
+                    if (global.Showdown) global.Showdown.confetti(stage, 2600);
+                })
+                .catch(err => console.error(err))
+                .then(() => { playing = false; });
+        }, error => console.error('ルーレットの受信に失敗:', error));
+    }
+
+    // 進行役のボードは自分で再生するので呼ばない
+    function watchLive() {
+        unlockSoundOnFirstTouch();
+        setupLiveSoundButton();
+        watchLiveShowdown();
+        watchLiveRoulette();
+    }
+
     /* ---------- 端末ごとの合言葉 ---------- */
 
     // URL が出回っても、知らない人がそのまま開けないようにするための簡易的な鍵。
@@ -825,6 +949,7 @@
         downloadText,
         param,
         isAdmin,
+        watchLive,
         applyDisplayModes
     };
 })(window);

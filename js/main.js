@@ -32,6 +32,10 @@
         D.applyDisplayModes();
         bindEvents();
 
+        // 観戦モードのボードは、進行役が流している抽選を受け取って再生する
+        // （進行役のボードは自分で再生するので購読しない）
+        if (!D.isAdmin()) D.watchLive();
+
         db.ref('draft').on('value', snapshot => {
             const data = snapshot.val() || {};
             state.teams = data.teams || {};
@@ -78,6 +82,11 @@
                 if (window.Showdown && Showdown.sfx.drumrollAbort) Showdown.sfx.drumrollAbort();
                 clearShowdown();
             });
+        }
+
+        const rouletteModal = document.getElementById('rouletteModal');
+        if (rouletteModal) {
+            rouletteModal.addEventListener('hide.bs.modal', clearRoulette);
         }
         on('btn-add-player', addPlayer);
         on('btn-add-roulette-slot', addRouletteSlot);
@@ -481,6 +490,7 @@
         const sfx = window.Showdown && window.Showdown.sfx;
 
         if (sfx) { sfx.unlock(); sfx.tense(); }
+        publishRoulette(rouletteCtx);
         spinBtn.disabled = true;
         spinBtn.textContent = '回転中…';
         note.textContent = '';
@@ -505,6 +515,7 @@
 
     function applyRoulette() {
         if (!rouletteCtx || !rouletteCtx.done || !rouletteCtx.winner) return;
+        clearRoulette();
 
         const ctx = rouletteCtx;
 
@@ -1180,6 +1191,23 @@
     function clearShowdown() {
         if (!D.isAdmin()) return;
         db.ref('live/showdown').remove().catch(() => { /* 無視 */ });
+    }
+
+    // ルーレットも同じ形で共有する
+    function publishRoulette(ctx) {
+        if (!ctx || !D.isAdmin()) return;
+        db.ref('live/roulette').set({
+            id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+            teamName: ctx.teamName,
+            slot: ctx.slot,
+            items: ctx.items,
+            winnerIndex: ctx.winnerIndex
+        }).catch(() => { /* 共有に失敗しても進行は止めない */ });
+    }
+
+    function clearRoulette() {
+        if (!D.isAdmin()) return;
+        db.ref('live/roulette').remove().catch(() => { /* 無視 */ });
     }
 
     function spinLottery() {
