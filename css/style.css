@@ -2522,6 +2522,16 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
     opacity: .8;
 }
 
+/* 順番が来ていないルーレット枠は「済」ではなく「順番待ち」 */
+.pool-chip.taken.is-slot-later {
+    text-decoration: none;
+    opacity: .45;
+}
+
+.pool-chip.taken.is-slot-later::after {
+    content: "順番待ち";
+}
+
 @media (max-width: 720px) {
 
     /* スマホでは操作ボタンを右寄せの小さめに戻す（横幅いっぱいに伸びていた） */

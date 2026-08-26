@@ -239,6 +239,50 @@
         return map;
     }
 
+    // ルーレット枠を番号順に並べる（リストの並び順に依存しないように）
+    function rouletteSlots(pool) {
+        const slotIndex = name => {
+            const key = D.normalizeName(name);
+            for (let i = 0; i < D.ROULETTE_MAX; i++) {
+                if (D.normalizeName(D.rouletteSlotName(i)) === key) return i;
+            }
+            return D.ROULETTE_MAX;
+        };
+        return pool.filter(D.isRouletteName).sort((a, b) => slotIndex(a) - slotIndex(b));
+    }
+
+    // ロック判定に使う情報をまとめて作る
+    function lockContext() {
+        const pool = D.playerPool({ players: state.players });
+        // 全巡ぶんの使用済み（当選したルーレット枠もここに入る）
+        const used = D.takenPlayers(state.nominations, state.settings.totalRounds);
+        return {
+            taken: takenBefore(),
+            others: othersNow(),
+            locking: D.isAllIn(state.settings, state.currentRound),
+            used: used,
+            nextSlot: rouletteSlots(pool).find(name => !used.has(D.normalizeName(name))) || null
+        };
+    }
+
+    // その名前が選べない理由。選べるなら null
+    function lockReason(name, ctx) {
+        const key = D.normalizeName(name);
+
+        const before = ctx.taken.get(key);
+        if (before) return { text: before.round + '巡目で指名済' };
+
+        if (ctx.locking && ctx.others.has(key)) return { text: ctx.others.get(key) + ' が確定済' };
+
+        // ルーレット枠は番号順に1つずつ。①を消費するまで②以降は選べない
+        if (D.isRouletteName(name) && key !== D.normalizeName(ctx.nextSlot || '')) {
+            if (ctx.used.has(key)) return { text: '使用済み' };
+            return { text: ctx.nextSlot + ' の後に使えます', later: true };
+        }
+
+        return null;
+    }
+
     function renderPool() {
         const pool = D.playerPool({ players: state.players });
         const block = document.getElementById('pool-block');
@@ -252,16 +296,9 @@
         }
         block.classList.remove('hide');
 
-        const taken = takenBefore();
-        const others = othersNow();
-        // 全チームが出し揃うまではロックしない（重複＝ポーカー抽選を従来どおり成立させる）
-        const locking = D.isAllIn(state.settings, state.currentRound);
+        const ctx = lockContext();
         const current = D.normalizeName(document.getElementById('player-name').value);
-        // 過去の巡で指名済み、または今の巡で確定済み＝選べない
-        const isLocked = name => {
-            const k = D.normalizeName(name);
-            return taken.has(k) || (locking && others.has(k));
-        };
+        const isLocked = name => !!lockReason(name, ctx);
 
         const available = pool.filter(name => !isLocked(name));
         count.textContent = '残り ' + available.length + ' / ' + pool.length + ' 名';
@@ -278,21 +315,20 @@
 
         shown.forEach(name => {
             const key = D.normalizeName(name);
-            const takenBy = taken.get(key);
-            const heldBy = locking ? others.get(key) : null;
+            const locked = lockReason(name, ctx);
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'pool-chip';
 
-            if (takenBy || heldBy) {
-                const why = takenBy ? takenBy.round + '巡目で指名済' : heldBy + ' が確定済';
+            if (locked) {
                 btn.classList.add('taken');
+                if (locked.later) btn.classList.add('is-slot-later');
                 btn.disabled = true;
-                btn.title = why;
-                btn.innerHTML = D.esc(name) + '<span class="by">' + D.esc(why) + '</span>';
+                btn.title = locked.text;
+                btn.innerHTML = D.esc(name) + '<span class="by">' + D.esc(locked.text) + '</span>';
             } else {
                 if (key === current) btn.classList.add('selected');
-                const rival = others.get(key);
+                const rival = ctx.others.get(key);
                 const rl = D.isRouletteName(name);
                 if (rl) btn.classList.add('is-roulette-slot');
                 btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
@@ -335,6 +371,15 @@
         }
 
         if (D.isRouletteName(name)) {
+            const ctx = lockContext();
+            if (key !== D.normalizeName(ctx.nextSlot || '')) {
+                warnings.push({
+                    type: 'danger',
+                    text: ctx.used.has(key)
+                        ? 'この枠はすでに使用済みです（指名できません）'
+                        : 'ルーレット枠は番号順に1つずつです。' + ctx.nextSlot + ' を消費してから指名できます'
+                });
+            }
             const items = rouletteItems();
             warnings.push({
                 type: 'warn',
