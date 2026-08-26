@@ -4,9 +4,11 @@
 (function (global) {
     'use strict';
 
+    // 盤の出目。隣り合う色相が離れるように並べる。
+    // 先頭2つはロゴの黄と水色。ラベルは濃い文字なので、いずれも明るい色にする。
     const SEG_COLORS = [
-        '#1ed760', '#63b3ff', '#ff8fa3', '#e5c368', '#b98cff',
-        '#3ddc97', '#ff9f6e', '#7ee0ff', '#ffd166', '#ff7fb0'
+        '#f8d000', '#88c8e8', '#ff8fa3', '#3ddc97', '#c08cff',
+        '#ff9f6e', '#7ee0ff', '#e5c368', '#ff7fb0', '#63b3ff'
     ];
 
     const SPIN_MS = 6200;      // 回転時間
@@ -61,7 +63,7 @@
             '<div class="rl-face" style="background:conic-gradient(' + stops + ')"></div>' +
             spokes +
             '</div>' +
-            '<div class="rl-hub"><span>🎰</span></div>' +
+            '<div class="rl-hub"><span>SPIN</span></div>' +
             '</div>';
 
         const wheel = host.querySelector('.rl-wheel');

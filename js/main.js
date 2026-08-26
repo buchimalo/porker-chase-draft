@@ -162,7 +162,7 @@
         const teams = currentTeams();
 
         if (!teams.length) {
-            board.innerHTML = '<div class="empty-state"><div class="big">🃏</div>チームが登録されていません</div>';
+            board.innerHTML = '<div class="empty-state"><div class="big">—</div>チームが登録されていません</div>';
             updateProgress(0, 0);
             return;
         }
@@ -223,7 +223,7 @@
                 tags.push('<span class="tag tag-tentative">仮</span>');
             } else if (D.isRouletteWaiting(nom)) {
                 // ルーレット待ち。回すまで誰を獲るか決まっていない
-                playerHtml = '🎰 ルーレット';
+                playerHtml = 'ルーレット';
                 playerClass += ' is-roulette';
                 if (conflictTeams.has(team.id)) {
                     // 他チームもルーレットを選んだ場合はポーカー抽選で決める
@@ -243,18 +243,22 @@
                     tags.push('<span class="tag tag-dup">' + dup.round + '巡目で指名済み</span>');
                 }
                 if (D.isRoulette(nom)) {
-                    tags.push('<span class="tag tag-roulette">🎰 ルーレット獲得</span>');
+                    tags.push('<span class="tag tag-roulette">ルーレット獲得</span>');
                 }
                 if (nom.attempts && nom.attempts.length) {
                     tags.push('<span class="tag tag-won">再指名</span>');
                 }
             }
 
+            // 指名順は 01, 02 … のゼロ埋め。背面にも大きく敷く
+            const orderLabel = ('0' + (index + 1)).slice(-2);
+
             card.innerHTML =
+                '<span class="pick-ghost">' + orderLabel + '</span>' +
                 '<div class="pick-team">' +
                 D.avatarHtml(team) +
-                '<span>' + D.esc(team.name) + '</span>' +
-                '<span class="pick-order">' + (index + 1) + '番手</span>' +
+                '<span class="pick-name">' + D.esc(team.name) + '</span>' +
+                '<span class="pick-order">' + orderLabel + '</span>' +
                 '</div>' +
                 '<div class="' + playerClass + '">' + playerHtml + '</div>' +
                 '<div class="pick-tags">' + tags.join('') + '</div>';
@@ -343,7 +347,7 @@
         let html = '<div class="conflict-alert"><h6>指名が重複しています — 抽選が必要です</h6>';
         conflicts.forEach(c => {
             html += '<div class="conflict-item">' +
-                '<span class="conflict-player">' + (D.isRouletteName(c.name) ? '🎰 ' : '') + D.esc(c.name) + '</span>' +
+                '<span class="conflict-player">' + D.esc(c.name) + '</span>' +
                 '<span class="conflict-teams">' + c.teamIds.map(id => D.esc(nameOf(id))).join(' / ') + '</span>' +
                 '<button class="btn2 btn2-gold btn2-sm admin-only no-obs" data-lottery-key="' + D.esc(c.key) + '">抽選する</button>' +
                 '</div>';
@@ -400,7 +404,7 @@
         if (!pending.length) { box.innerHTML = ''; return; }
 
         const items = rouletteItems();
-        let html = '<div class="roulette-alert"><h6>🎰 ルーレット待ち</h6>';
+        let html = '<div class="roulette-alert"><h6>ルーレット待ち</h6>';
         pending.forEach(entry => {
             const team = entry.team;
             const ok = items.length > 0;
@@ -554,7 +558,7 @@
                 (nom.attempts || []).forEach(att => {
                     rows.push({
                         round: r, team,
-                        player: att.roulette ? '🎰 ' + att.playerName : att.playerName,
+                        player: att.playerName,
                         status: 'lost_lottery'
                     });
                 });
@@ -595,9 +599,9 @@
                 '<td class="player-cell">' + (lost ? '<s>' + D.esc(row.player) + '</s>' : D.esc(row.player)) + '</td>' +
                 '<td>' + (lost ? '<span class="tag tag-lost">抽選負け</span>'
                     : tentative ? '<span class="tag tag-tentative">仮</span>'
-                        : rlWait ? '<span class="tag tag-roulette">🎰 ルーレット待ち</span>'
+                        : rlWait ? '<span class="tag tag-roulette">ルーレット待ち</span>'
                             : contested ? '<span class="tag tag-conflict">重複 — 抽選待ち</span>'
-                                : row.roulette ? '<span class="tag tag-roulette">🎰 ルーレット獲得</span>'
+                                : row.roulette ? '<span class="tag tag-roulette">ルーレット獲得</span>'
                                     : '<span class="tag tag-won">確定</span>') + '</td>' +
                 '</tr>';
         });
@@ -1021,7 +1025,7 @@
             const chip = document.createElement('span');
             const rl = D.isRouletteName(name);
             chip.className = 'pool-chip player-chip' + (rl ? ' is-roulette-slot' : '');
-            chip.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
+            chip.innerHTML = D.esc(name) +
                 '<button type="button" class="chip-remove" title="削除">✕</button>';
             chip.querySelector('.chip-remove').addEventListener('click', () => {
                 playerDraft.splice(index, 1);
@@ -1129,7 +1133,7 @@
         };
 
         const isRl = D.isRouletteName(target.name);
-        document.getElementById('lottery-player').textContent = (isRl ? '🎰 ' : '') + target.name;
+        document.getElementById('lottery-player').textContent = target.name;
         document.getElementById('showdown').innerHTML = '';
         document.getElementById('showdown-banner').className = 'showdown-banner';
         document.getElementById('showdown-banner').textContent = '';
@@ -1478,7 +1482,7 @@
             return;
         }
 
-        const colors = window.Roulette ? window.Roulette.SEG_COLORS : ['#1ed760'];
+        const colors = window.Roulette ? window.Roulette.SEG_COLORS : ['#f8d000'];
         const taken = D.takenPlayers(state.nominations, state.settings.totalRounds);
         box.innerHTML = '';
 
@@ -1585,7 +1589,7 @@
         });
 
         if (!pool.length) {
-            box.innerHTML = '<p class="pool-empty">選手が登録されていません。⚙ →「選手リストを編集」から登録してください。</p>';
+            box.innerHTML = '<p class="pool-empty">選手が登録されていません。「設定」→「選手リストを編集」から登録してください。</p>';
             return;
         }
         if (!shown.length) {

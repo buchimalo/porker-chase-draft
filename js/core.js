@@ -552,7 +552,7 @@
         container.className = 'results-grid';
 
         if (!teams.length) {
-            container.innerHTML = '<div class="empty-state"><div class="big">🃏</div>チームが登録されていません</div>';
+            container.innerHTML = '<div class="empty-state"><div class="big">—</div>チームが登録されていません</div>';
             return;
         }
 
@@ -601,7 +601,7 @@
         container.className = 'tbl-wrap';
 
         if (!teams.length) {
-            container.innerHTML = '<div class="empty-state"><div class="big">🃏</div>チームが登録されていません</div>';
+            container.innerHTML = '<div class="empty-state"><div class="big">—</div>チームが登録されていません</div>';
             return;
         }
 

@@ -1,50 +1,55 @@
 /* ============================================================
    ポカチェ ドラフト会議 — デザインシステム
 
-   方針（Linear / Vercel の設計を参考）
-   - 近黒のキャンバスに 1px のヘアライン境界。影・グロー・ぼかしは使わない
-   - 彩度はアクセント1色とチームカラーだけに限定する
-   - Inter を狭いトラッキングで。数字はタビュラー
+   方針（放送用スコアボード / エディトリアル）
+   - ポーカーのフェルトを思わせる暗い緑のキャンバスに 1px のヘアライン境界
+   - 色は「監督のイメージカラー」「状態の赤」「アクセントの金」だけ
+   - 角丸は最小限。丸ボタンは使わない
+   - 書体は3役。Archivo=数字と見出し / Zen Kaku Gothic New=日本語 / Roboto Mono=ラベル
    - 装飾ではなく余白と階層で見せる
    ============================================================ */
 
 :root {
-    /* 面 */
-    --void: #121212;
-    --carbon: #181818;
-    --obsidian: #1f1f1f;
-    --raised: #2a2a2a;
+    /* 面 — フェルトを思わせる暗い緑 */
+    --void: #0a100d;
+    --carbon: #101613;
+    --obsidian: #161e1a;
+    --raised: #1f2b25;
 
     /* 境界 */
-    --line: #282828;
-    --line-strong: #3e3e3e;
-    --line-bright: #7c7c7c;
+    --line: #1e2823;
+    --line-strong: #31413a;
+    --line-bright: #5f746b;
 
     /* 文字 */
-    --paper: #ffffff;
-    --mist: #ffffff;
-    --fog: #b3b3b3;
-    --ash: #a7a7a7;
+    --paper: #f4f7f6;
+    --mist: #e9efec;
+    --fog: #a9b6b0;
+    --ash: #8b9a94;
 
     /* アクセント（操作できるものにだけ使う） */
-    --accent: #1ed760;
-    --accent-dim: rgba(30, 215, 96, 0.14);
-    --accent-line: rgba(30, 215, 96, 0.4);
-    --on-accent: #000000;
+    --accent-rgb: 248, 208, 0;
+    --accent: #f8d000;   /* ポカチェのロゴから抽出 */
+    --accent-dim: rgba(var(--accent-rgb), 0.14);
+    --accent-line: rgba(var(--accent-rgb), 0.4);
+    --on-accent: #191100;
 
     /* 状態 */
-    --green: #1ed760;
+    --green: #2fd39a;
     --red: #f1464f;
-    --amber: #ffa42b;
-    --blue: #539df5;
+    --amber: #ff9330;
+    --blue: #88c8e8;   /* ポカチェのロゴのカタカナ部分から抽出 */
 
-    --r-sm: 4px;
-    --r-md: 6px;
-    --r-lg: 8px;
-    --r-pill: 9999px;
+    /* 角 — 丸みは最小限に。ピル型は使わない */
+    --r-sm: 2px;
+    --r-md: 2px;
+    --r-lg: 3px;
+    --r-pill: 2px;
 
-    --font: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    --font: 'Zen Kaku Gothic New', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI',
         'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif;
+    --font-disp: 'Archivo', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 * {
@@ -62,8 +67,8 @@ body {
     color: var(--mist);
     font-family: var(--font);
     font-size: 15px;
-    line-height: 1.5;
-    letter-spacing: -0.011em;
+    line-height: 1.6;
+    letter-spacing: 0;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
@@ -75,6 +80,7 @@ h4,
 h5 {
     margin: 0;
     color: var(--paper);
+    font-family: var(--font-disp);
     font-weight: 600;
     letter-spacing: -0.022em;
 }
@@ -131,16 +137,18 @@ h5 {
 }
 
 .brand-title {
+    font-family: var(--font-disp);
     font-size: 15px;
     font-weight: 600;
     line-height: 1.3;
+    letter-spacing: .01em;
 }
 
 .brand-sub {
-    margin: 1px 0 0;
-    font-size: 12px;
-    color: var(--ash);
-    letter-spacing: 0;
+    margin: 3px 0 0;
+    font-size: 11px;
+    color: var(--blue);
+    letter-spacing: .14em;
 }
 
 .round-badge {
@@ -153,16 +161,20 @@ h5 {
 }
 
 .round-badge .unit {
-    font-size: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
     font-weight: 500;
-    color: var(--fog);
+    letter-spacing: .18em;
+    color: var(--ash);
 }
 
 .round-badge .num {
-    font-size: 30px;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: -0.03em;
+    font-family: var(--font-disp);
+    font-size: 52px;
+    font-weight: 700;
+    line-height: .84;
+    letter-spacing: -0.045em;
+    color: var(--accent);
 }
 
 .topbar-actions {
@@ -182,15 +194,17 @@ h5 {
     justify-content: center;
     gap: 6px;
     height: 32px;
+    /* 箱の高さと同じにすると文字が正確に縦中央へ来る */
+    line-height: 32px;
     padding: 0 16px;
     border-radius: var(--r-pill);
     border: none;
     background: var(--obsidian);
     color: var(--mist);
-    font-family: var(--font);
+    font-family: var(--font-disp);
     font-size: 13px;
     font-weight: 500;
-    letter-spacing: -0.006em;
+    letter-spacing: 0.02em;
     white-space: nowrap;
     text-decoration: none;
     cursor: pointer;
@@ -240,12 +254,14 @@ h5 {
 
 .btn2-lg {
     height: 40px;
+    line-height: 39px;
     padding: 0 22px;
     font-size: 14px;
 }
 
 .btn2-sm {
     height: 26px;
+    line-height: 26px;
     padding: 0 9px;
     font-size: 12px;
 }
@@ -344,49 +360,68 @@ h5 {
     position: relative;
     display: flex;
     flex-direction: column;
-    min-height: 132px;
-    padding: 16px 18px 14px;
+    min-height: 146px;
+    padding: 15px 17px 16px;
     background: var(--carbon);
     border-right: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
+    overflow: hidden;
     transition: background .15s ease;
 }
 
+/* 地は塗らない。監督の色は「背面の指名順」と「監督名」だけが持つ */
 .pick-card:hover {
     background: var(--obsidian);
 }
 
+/* 指名中は色ではなく明るさで一段持ち上げる */
 .pick-card.is-turn {
     background: var(--obsidian);
 }
 
-.pick-card.is-turn::before,
-.pick-card.is-conflict::before {
-    content: '';
+/* 重複だけ、うっすら赤を敷く */
+.pick-card.is-conflict {
+    background:
+        linear-gradient(rgba(241, 70, 79, .08), rgba(241, 70, 79, .08)),
+        var(--carbon);
+}
+
+.pick-card.is-conflict:hover {
+    background:
+        linear-gradient(rgba(241, 70, 79, .12), rgba(241, 70, 79, .12)),
+        var(--carbon);
+}
+
+/* 背面に敷く指名順 */
+.pick-ghost {
     position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-}
-
-.pick-card.is-turn::before {
-    background: var(--accent);
-}
-
-.pick-card.is-conflict::before {
-    background: var(--red);
+    right: 6px;
+    bottom: -20px;
+    font-family: var(--font-disp);
+    font-size: 76px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    color: var(--team-color, var(--paper));
+    opacity: .2;
+    pointer-events: none;
 }
 
 .pick-team {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
     margin-bottom: 12px;
     font-size: 12px;
     font-weight: 500;
     color: var(--fog);
     letter-spacing: 0;
+}
+
+.pick-name {
+    font-weight: 700;
+    letter-spacing: .04em;
 }
 
 .pick-dot {
@@ -399,29 +434,33 @@ h5 {
 
 .pick-order {
     margin-left: auto;
-    font-size: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .1em;
     color: var(--ash);
 }
 
 .pick-player {
+    position: relative;
     margin-top: auto;
     font-size: 24px;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.25;
-    letter-spacing: -0.028em;
+    letter-spacing: 0;
     color: var(--paper);
     word-break: break-word;
 }
 
 .pick-player.is-empty {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 400;
-    letter-spacing: -0.01em;
-    color: var(--ash);
+    letter-spacing: .1em;
+    color: var(--dim, var(--ash));
+    opacity: .8;
 }
 
 .pick-player.is-hidden-pick {
-    color: var(--accent);
+    color: var(--blue);
     letter-spacing: .18em;
 }
 
@@ -432,6 +471,7 @@ h5 {
 }
 
 .pick-tags {
+    position: relative;
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
@@ -447,44 +487,51 @@ h5 {
     display: inline-flex;
     align-items: center;
     height: 20px;
-    padding: 0 9px;
-    border-radius: var(--r-pill);
+    /* 箱の高さと同じにすると文字が正確に縦中央へ来る */
+    line-height: 20px;
+    padding: 0 8px;
+    border-radius: 1px;
     border: none;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0;
+    background: var(--line-strong);
+    color: var(--paper);
+    font-family: var(--font-disp);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
     white-space: nowrap;
 }
 
+/* 状態タグは塗り＋白文字。白が乗るように濃いトーンで */
 .tag-conflict {
-    background: rgba(239, 46, 56, .2);
-    color: #ff757c;
+    background: #c8202d;
+    color: #fff;
 }
 
 .tag-lost {
-    background: rgba(234, 161, 58, .2);
-    color: #f5bd6a;
+    background: #a35f0d;
+    color: #fff;
 }
 
 .tag-won {
-    background: rgba(53, 194, 106, .2);
-    color: #5fd68d;
+    background: #1a6580;
+    color: #fff;
 }
 
 .tag-ok {
-    background: var(--raised);
-    color: var(--fog);
+    background: var(--line-strong);
+    color: var(--paper);
 }
 
 .tag-dup {
-    background: rgba(91, 157, 255, .2);
-    color: #86b8ff;
+    background: var(--line-strong);
+    color: var(--paper);
 }
 
+/* 黄色は白文字が読めないので、ここだけ濃い文字 */
 .tag-turn {
     background: var(--accent);
     color: var(--on-accent);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 /* ============================================================
@@ -492,8 +539,10 @@ h5 {
    ============================================================ */
 
 .conflict-alert {
-    padding: 14px 18px 16px;
-    background: rgba(239, 46, 56, .1);
+    padding: 14px 18px 16px 15px;
+    background: transparent;
+    border-top: 1px solid var(--line);
+    border-left: 3px solid var(--red);
 }
 
 .conflict-alert h6 {
@@ -574,7 +623,8 @@ h5 {
     grid-template-columns: minmax(88px, 148px) 1fr auto;
     align-items: center;
     gap: 14px;
-    padding: 12px 14px;
+    padding: 12px 14px 12px 11px;
+    border-left: 3px solid transparent;
     background: var(--carbon);
     opacity: 1;
     transform: translateX(0);
@@ -595,7 +645,8 @@ h5 {
 }
 
 .sd-row.is-winner {
-    background: rgba(215, 241, 75, .16);
+    background: var(--raised);
+    border-left-color: var(--accent);
 }
 
 .sd-row.is-out {
@@ -604,7 +655,7 @@ h5 {
 }
 
 .sd-row.is-objector {
-    background: rgba(239, 46, 56, .2);
+    border-left-color: var(--red);
     filter: none !important;
     opacity: 1 !important;
 }
@@ -1202,7 +1253,8 @@ table.matrix td.empty {
 .pool-chip {
     appearance: none;
     height: 32px;
-    padding: 0 15px;
+    line-height: 1;
+    padding: 1px 15px 0;
     border-radius: var(--r-pill);
     border: none;
     background: var(--obsidian);
@@ -1234,9 +1286,11 @@ table.matrix td.empty {
 
 .pool-chip .by {
     margin-left: 6px;
+    font-family: var(--font-disp);
     font-size: 11px;
-    font-weight: 400;
-    opacity: .7;
+    font-weight: 500;
+    letter-spacing: .04em;
+    opacity: .75;
 }
 
 .pool-empty {
@@ -1347,7 +1401,7 @@ table.matrix td.empty {
 }
 
 .pl-item.is-contested {
-    background: rgba(239, 46, 56, .16);
+    background: var(--obsidian);
 }
 
 .pl-item.is-contested::before {
@@ -1418,8 +1472,9 @@ table.matrix td.empty {
 
 .team-picks .rd {
     flex: 0 0 auto;
+    font-family: var(--font-mono);
     font-size: 12px;
-    color: var(--ash);
+    color: var(--blue);
 }
 
 .team-picks .nm {
@@ -1442,18 +1497,20 @@ table.matrix td.empty {
    指名シート
    ============================================================ */
 
+/* 状態は面で塗らず、左の帯とアイコンの色で示す */
 .sheet-status {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 14px 16px;
+    padding: 14px 16px 14px 13px;
     margin-bottom: 16px;
     border-radius: var(--r-lg);
     background: var(--carbon);
+    border-left: 3px solid var(--line-strong);
 }
 
 .sheet-status.state-waiting {
-    background: rgba(91, 157, 255, .14);
+    border-left-color: var(--blue);
 }
 
 .sheet-status.state-waiting .sheet-status-icon {
@@ -1461,7 +1518,7 @@ table.matrix td.empty {
 }
 
 .sheet-status.state-done {
-    background: rgba(53, 194, 106, .14);
+    border-left-color: var(--green);
 }
 
 .sheet-status.state-done .sheet-status-icon {
@@ -1469,10 +1526,14 @@ table.matrix td.empty {
 }
 
 .sheet-status.state-redo {
-    background: rgba(239, 46, 56, .18);
+    border-left-color: var(--red);
 }
 
 .sheet-status.state-redo .sheet-status-icon {
+    color: var(--red);
+}
+
+.sheet-status.state-redo .sheet-status-title {
     color: var(--red);
 }
 
@@ -1907,11 +1968,6 @@ table.tbl tbody tr:hover td {
     background: var(--obsidian);
 }
 
-/* 緑は機能的な場面にだけ。勝者行は控えめな緑の面 */
-.sd-row.is-winner {
-    background: rgba(30, 215, 96, .16);
-}
-
 .sd-hand {
     color: var(--accent);
     font-weight: 700;
@@ -1943,8 +1999,8 @@ table.tbl tbody tr:hover td {
 }
 
 .pick-order {
-    font-size: 12px;
-    font-weight: 400;
+    font-size: 10px;
+    font-weight: 500;
     color: var(--ash);
 }
 
@@ -2036,8 +2092,8 @@ table.tbl .team-cell {
 
 /* 仮出し */
 .tag-tentative {
-    background: rgba(255, 164, 43, .22);
-    color: #ffc16b;
+    background: #a8641a;
+    color: #fff;
 }
 
 .pick-player.is-tentative {
@@ -2045,7 +2101,7 @@ table.tbl .team-cell {
 }
 
 .sheet-status.state-tentative {
-    background: rgba(255, 164, 43, .16);
+    border-left-color: var(--amber);
 }
 
 .sheet-status.state-tentative .sheet-status-icon {
@@ -2053,7 +2109,7 @@ table.tbl .team-cell {
 }
 
 .sheet-status.state-locked {
-    background: rgba(30, 215, 96, .16);
+    border-left-color: var(--accent);
 }
 
 .sheet-status.state-locked .sheet-status-icon {
@@ -2166,10 +2222,10 @@ body.guest-mode .admin-only {
     position: absolute;
     inset: 0;
     border-radius: 50%;
+    /* ぼかしは使わず、輪郭のリングだけ */
     box-shadow:
         0 0 0 8px var(--raised),
-        0 0 0 10px var(--line-strong),
-        0 18px 44px rgba(0, 0, 0, .55);
+        0 0 0 10px var(--line-strong);
     will-change: transform;
 }
 
@@ -2231,9 +2287,9 @@ body.guest-mode .admin-only {
     justify-content: center;
     font-size: 15px;
     font-weight: 800;
-    letter-spacing: .06em;
+    letter-spacing: .12em;
+    font-family: var(--font-disp);
     color: var(--fog);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
 }
 
 .rl-pointer {
@@ -2246,7 +2302,6 @@ body.guest-mode .admin-only {
     border-left: 15px solid transparent;
     border-right: 15px solid transparent;
     border-top: 30px solid var(--accent);
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6));
     z-index: 3;
 }
 
@@ -2284,9 +2339,10 @@ body.guest-mode .admin-only {
 
 .roulette-banner {
     min-height: 34px;
+    font-family: var(--font-disp);
     font-size: 1.55rem;
-    font-weight: 800;
-    letter-spacing: -.01em;
+    font-weight: 700;
+    letter-spacing: .01em;
     margin: 4px 0 6px;
     opacity: 0;
     transform: translateY(8px);
@@ -2358,8 +2414,8 @@ body.guest-mode .admin-only {
 }
 
 .tag-roulette {
-    background: rgba(30, 215, 96, .16);
-    color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
 }
 
 .rl-chip-row {
@@ -2452,7 +2508,7 @@ html {
 
 /* 選択範囲 */
 ::selection {
-    background: rgba(30, 215, 96, .28);
+    background: rgba(var(--accent-rgb), .28);
     color: var(--paper);
 }
 
@@ -2486,6 +2542,41 @@ table.tbl .round-cell,
     background: var(--line-strong);
 }
 
+/* 指名履歴・一覧表のバッジは、記録なので塗らずに枠線で */
+table.tbl .tag {
+    background: transparent;
+    border: 1px solid currentColor;
+}
+
+table.tbl .tag-conflict {
+    color: #ff757c;
+}
+
+table.tbl .tag-lost {
+    color: #f5bd6a;
+}
+
+table.tbl .tag-won {
+    color: var(--blue);
+}
+
+table.tbl .tag-ok {
+    color: var(--fog);
+}
+
+table.tbl .tag-dup {
+    color: var(--fog);
+}
+
+table.tbl .tag-tentative {
+    color: #ffc16b;
+}
+
+table.tbl .tag-turn,
+table.tbl .tag-roulette {
+    color: var(--accent);
+}
+
 /* 指名履歴 — 巡目ごとにまとめて見せる */
 table.tbl tbody tr.is-round-start td {
     border-top: 1px solid var(--line-strong);
@@ -2505,18 +2596,18 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
 
 /* 練習モードの帯 — 明るすぎたので落ち着かせる */
 .demo-banner {
-    background: rgba(30, 215, 96, .12);
+    background: rgba(var(--accent-rgb), .12);
     color: var(--accent);
-    border-bottom: 1px solid rgba(30, 215, 96, .28);
+    border-bottom: 1px solid rgba(var(--accent-rgb), .28);
 }
 
 .demo-banner button {
-    border-color: rgba(30, 215, 96, .45);
+    border-color: rgba(var(--accent-rgb), .45);
     color: var(--accent);
 }
 
 .demo-banner button:hover {
-    background: rgba(30, 215, 96, .16);
+    background: rgba(var(--accent-rgb), .16);
 }
 
 /* 進捗バーの動きを少しなめらかに */
@@ -2524,19 +2615,6 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
     transition: width .45s cubic-bezier(.22, .61, .36, 1);
 }
 
-/* 指名中・重複のカードは左のラインを少し太くして、地を淡く色づける */
-.pick-card.is-turn::before,
-.pick-card.is-conflict::before {
-    width: 3px;
-}
-
-.pick-card.is-conflict {
-    background: rgba(255, 117, 124, .05);
-}
-
-.pick-card.is-conflict:hover {
-    background: rgba(255, 117, 124, .08);
-}
 
 /* 印刷時は装飾を落とす */
 @media print {
@@ -2595,6 +2673,7 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
     /* 送信ボタンは押しやすく */
     .submit-row .btn2-lg {
         height: 46px;
+        line-height: 46px;
     }
 
     .demo-banner {
@@ -2632,12 +2711,14 @@ table.tbl tbody tr:hover .round-cell.is-repeat {
     #playerListModal .modal-header .seg button,
     #resultsModal .modal-header .seg button {
         height: 30px;
+        line-height: 30px;
         padding: 0 16px;
         font-size: 13px;
     }
 
     #resultsModal .modal-header .btn2-sm {
         height: 30px;
+        line-height: 30px;
         padding: 0 13px;
         font-size: 13px;
     }

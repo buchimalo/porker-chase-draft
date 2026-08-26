@@ -179,7 +179,7 @@
         } else if (nom && D.isRouletteWaiting(nom)) {
             // ルーレットで送信済み。進行役が回すのを待っている
             box.classList.add('state-tentative');
-            icon.textContent = '🎰';
+            icon.textContent = '·';
             title.textContent = nom.playerName + ' で送信済み — 抽選待ち';
             detail.textContent = '進行役がルーレットを回します。止まった選手をそのまま獲得します。';
             submitBtn.disabled = true;
@@ -190,7 +190,7 @@
         } else if (nom && D.isActive(nom)) {
             // 確定済み。もう変更できない
             box.classList.add('state-locked');
-            icon.textContent = D.isRoulette(nom) ? '🎰' : '✓';
+            icon.textContent = '✓';
             title.textContent = '確定：' + nom.playerName;
             detail.textContent = D.isRoulette(nom)
                 ? 'ルーレットで獲得しました。変更はできません。'
@@ -347,13 +347,13 @@
                 if (locked.later) btn.classList.add('is-slot-later');
                 btn.disabled = true;
                 btn.title = locked.text;
-                btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
+                btn.innerHTML = D.esc(name) +
                     '<span class="by">' + D.esc(locked.text) + '</span>';
             } else {
                 if (key === current) btn.classList.add('selected');
                 const rival = ctx.others.get(key) && ctx.others.get(key).name;
-                btn.innerHTML = (rl ? '🎰 ' : '') + D.esc(name) +
-                    (rival ? '<span class="by">⚔ ' + D.esc(rival) + '</span>' : '');
+                btn.innerHTML = D.esc(name) +
+                    (rival ? '<span class="by">VS ' + D.esc(rival) + '</span>' : '');
                 btn.addEventListener('click', () => {
                     document.getElementById('player-name').value = name;
                     renderPool();

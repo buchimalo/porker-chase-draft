@@ -138,7 +138,7 @@ draft/
 index.html            メインボード
 team-sheet.html       指名シート
 draft-results.html    結果一覧
-css/style.css         全画面共通のスタイル
+css/style.css         全画面共通のスタイル（デザイントークンは先頭の :root にまとめてある）
 js/core.js            Firebase 初期化・共通ロジック（重複検出、順序計算、練習モード等）
 js/showdown.js        抽選のポーカー勝負（配牌・役判定・逆転制御）
 js/roulette.js        ルーレット抽選の盤面と回転演出
