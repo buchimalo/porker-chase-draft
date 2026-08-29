@@ -695,51 +695,85 @@
         watchLiveRoulette();
     }
 
-    /* ---------- 端末ごとの合言葉 ---------- */
+    /* ---------- ログイン ---------- */
 
-    // URL が出回っても、知らない人がそのまま開けないようにするための簡易的な鍵。
-    // 合言葉はこのファイルに書いてあるので、本気で調べる人は突破できる。
-    // データそのものの保護は Firebase のセキュリティルールで行うこと。
-    const PASS_KEY = 'pcd.pass';
-    const PASS_CODE = '0416';
+    // 合言葉はこのファイルに書けない（誰でもソースを読めるため）。
+    // パスワードは Firebase 側で照合させ、ここには置かない。
+    //
+    // メールアドレスは秘密ではないので固定でよい。共有アカウントなので、
+    // 監督にはパスワードだけを口頭・DM で伝える。
+    const AUTH_EMAIL = 'draft@pokachi-draft.jp';
 
-    function passGate() {
-        // 配信オーバーレイと、視聴者に配る観戦モードは通す
+    // 認証が使えるか（読み取り専用ページでは auth を読み込んでいない）
+    function authAvailable() {
+        return !DEMO && typeof firebase !== 'undefined' && !!firebase.auth;
+    }
+
+    function signedIn() {
+        return authAvailable() && !!firebase.auth().currentUser;
+    }
+
+    function loginGate() {
+        // 配信オーバーレイと、視聴者に配る観戦モードは読み取りだけなので通す
         if (param('obs') === '1' || param('view') === '1') return;
-        try {
-            if (localStorage.getItem(PASS_KEY) === PASS_CODE) return;
-        } catch (e) {
-            return;   // localStorage が使えない環境では止めない
+        if (!authAvailable()) return;   // 練習モードなど
+
+        const auth = firebase.auth();
+        // 端末に記憶させる（次回からは自動でログイン済みになる）
+        if (auth.setPersistence && firebase.auth.Auth) {
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => { /* 無視 */ });
         }
 
-        const wrap = document.createElement('div');
-        wrap.className = 'pass-gate';
-        wrap.innerHTML =
-            '<form class="pass-box">' +
-            '<p class="pass-title">ポカチェ ドラフト会議</p>' +
-            '<p class="pass-lead">この端末では初回だけ合言葉が必要です</p>' +
-            '<input type="password" class="input pass-input" inputmode="numeric" ' +
-            'autocomplete="off" placeholder="合言葉" aria-label="合言葉">' +
-            '<p class="pass-error" role="alert"></p>' +
-            '<button type="submit" class="btn2 btn2-gold btn2-lg pass-submit">開く</button>' +
-            '</form>';
-        document.body.appendChild(wrap);
+        let wrap = null;
 
-        const form = wrap.querySelector('form');
-        const input = wrap.querySelector('input');
-        const error = wrap.querySelector('.pass-error');
-        input.focus();
+        function showForm() {
+            if (wrap) return;
+            wrap = document.createElement('div');
+            wrap.className = 'pass-gate';
+            wrap.innerHTML =
+                '<form class="pass-box">' +
+                '<p class="pass-title">ポカチェ ドラフト会議</p>' +
+                '<p class="pass-lead">この端末では初回だけパスワードが必要です</p>' +
+                '<input type="password" class="input pass-input" autocomplete="current-password" ' +
+                'placeholder="パスワード" aria-label="パスワード">' +
+                '<p class="pass-error" role="alert"></p>' +
+                '<button type="submit" class="btn2 btn2-gold btn2-lg pass-submit">開く</button>' +
+                '</form>';
+            document.body.appendChild(wrap);
 
-        form.addEventListener('submit', e => {
-            e.preventDefault();
-            if (input.value.trim() !== PASS_CODE) {
-                error.textContent = '合言葉が違います';
-                input.value = '';
-                input.focus();
-                return;
+            const form = wrap.querySelector('form');
+            const input = wrap.querySelector('input');
+            const error = wrap.querySelector('.pass-error');
+            const button = wrap.querySelector('button');
+            input.focus();
+
+            form.addEventListener('submit', e => {
+                e.preventDefault();
+                const value = input.value;
+                if (!value) return;
+
+                button.disabled = true;
+                error.textContent = '';
+                auth.signInWithEmailAndPassword(AUTH_EMAIL, value)
+                    .catch(err => {
+                        // 何が違うかは伝えない（総当たりの手掛かりになる）
+                        console.error('ログインに失敗:', err.code);
+                        error.textContent = err.code === 'auth/network-request-failed'
+                            ? '通信できませんでした。電波を確認してください'
+                            : 'パスワードが違います';
+                        input.value = '';
+                        input.focus();
+                    })
+                    .then(() => { button.disabled = false; });
+            });
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                if (wrap) { wrap.remove(); wrap = null; }
+            } else {
+                showForm();
             }
-            try { localStorage.setItem(PASS_KEY, PASS_CODE); } catch (err) { /* 無視 */ }
-            wrap.remove();
         });
     }
 
@@ -767,7 +801,7 @@
     }
 
     function bootExtras() {
-        passGate();
+        loginGate();
         setupPnosuke();
     }
 
