@@ -1,0 +1,166 @@
+{
+  "//": [
+    "Firebase Realtime Database のセキュリティルール。",
+    "",
+    "このアプリには認証がない（監督は URL を開くだけで書き込む）ので、",
+    "『誰が書いたか』では守れない。代わりに『どこに・どんな形で書けるか』を絞る。",
+    "",
+    "  - ルート直下と、知らないパスへの書き込みを一切拒否する",
+    "  - draft をまるごと置き換える／消すことを拒否する（過去にデータが消えた事故の形）",
+    "  - 監督（teams）と選手リスト（players）は削除できない",
+    "  - 各項目の型・長さ・範囲を検証し、壊れた値やゴミを弾く",
+    "",
+    "読み取りは配信の観戦者にも必要なので開けたまま。",
+    "『正しい形の書き込み』は誰でもできる点は変わらないため、",
+    "本当の意味での保護が必要になったら Firebase Authentication を入れること。"
+  ],
+
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "draft": {
+      ".read": true,
+      ".write": false,
+
+      "currentRound": {
+        ".write": true,
+        ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 20"
+      },
+
+      "teams": {
+        ".write": "newData.exists()",
+        ".validate": "newData.hasChildren()",
+        "$teamId": {
+          ".validate": "$teamId.matches(/^team[0-9]{1,3}$/)",
+          "id": { ".validate": "newData.isString() && newData.val() === $teamId" },
+          "name": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "order": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99" },
+          "icon": { ".validate": "newData.isString() && newData.val().length <= 300" },
+          "color": { ".validate": "newData.isString() && newData.val().length <= 20" }
+        }
+      },
+
+      "players": {
+        ".write": "newData.exists()",
+        ".validate": "newData.isString() && newData.val().length <= 8000"
+      },
+
+      "roulette": {
+        ".write": true,
+        ".validate": "newData.isString() && newData.val().length <= 2000"
+      },
+
+      "settings": {
+        ".write": false,
+
+        "totalRounds": {
+          ".write": true,
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 20"
+        },
+        "hidePicks": {
+          ".write": true,
+          ".validate": "newData.isBoolean()"
+        },
+        "revealed": {
+          ".write": true,
+          "$round": { ".validate": "$round.matches(/^round[0-9]{1,2}$/) && newData.isBoolean()" }
+        },
+        "allIn": {
+          ".write": true,
+          "$round": { ".validate": "$round.matches(/^round[0-9]{1,2}$/) && newData.isBoolean()" }
+        }
+      },
+
+      "nominations": {
+        ".write": true,
+        "$round": {
+          ".validate": "$round.matches(/^round[0-9]{1,2}$/)",
+          "$teamId": {
+            ".validate": "$teamId.matches(/^team[0-9]{1,3}$/)",
+
+            "playerName": { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "teamName": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "timestamp": { ".validate": "newData.isNumber()" },
+            "status": { ".validate": "newData.val() === 'confirmed' || newData.val() === 'tentative' || newData.val() === 'lost_lottery'" },
+            "roulette": { ".validate": "newData.isBoolean()" },
+            "rouletteWon": { ".validate": "newData.isBoolean()" },
+            "rouletteSlot": { ".validate": "newData.isString() && newData.val().length <= 60" },
+
+            "attempts": {
+              "$i": {
+                "playerName": { ".validate": "newData.isString() && newData.val().length <= 60" },
+                "status": { ".validate": "newData.isString() && newData.val().length <= 20" },
+                "timestamp": { ".validate": "newData.isNumber()" },
+                "roulette": { ".validate": "newData.isBoolean()" },
+                "rouletteSlot": { ".validate": "newData.isString() && newData.val().length <= 60" }
+              }
+            }
+          }
+        }
+      },
+
+      "lottery": {
+        ".write": true,
+        "$round": {
+          ".validate": "$round.matches(/^round[0-9]{1,2}$/)",
+          "$key": {
+            "playerName": { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "winnerTeamId": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "winnerTeamName": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "timestamp": { ".validate": "newData.isNumber()" },
+            "loserTeamNames": {
+              "$i": { ".validate": "newData.isString() && newData.val().length <= 40" }
+            }
+          }
+        }
+      },
+
+      "rouletteLog": {
+        ".write": true,
+        "$round": {
+          ".validate": "$round.matches(/^round[0-9]{1,2}$/)",
+          "$teamId": {
+            ".validate": "$teamId.matches(/^team[0-9]{1,3}$/)",
+            "playerName": { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "teamId": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "teamName": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "slot": { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "timestamp": { ".validate": "newData.isNumber()" },
+            "candidates": {
+              "$i": { ".validate": "newData.isString() && newData.val().length <= 60" }
+            }
+          }
+        }
+      }
+    },
+
+    "live": {
+      ".read": true,
+      ".write": false,
+
+      "showdown": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['id', 'packet'])",
+        "id": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "at": { ".validate": "newData.isNumber()" },
+        "player": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "packet": { ".validate": "newData.hasChildren(['hands', 'winner'])" }
+      },
+
+      "roulette": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['id', 'items'])",
+        "id": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "at": { ".validate": "newData.isNumber()" },
+        "teamName": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "slot": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "winnerIndex": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20" },
+        "items": {
+          ".validate": "newData.hasChildren()",
+          "$i": { ".validate": "newData.isString() && newData.val().length <= 60" }
+        }
+      }
+    }
+  }
+}
