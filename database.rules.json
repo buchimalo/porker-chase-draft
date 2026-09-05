@@ -1,17 +1,20 @@
 {
 // Firebase Realtime Database のセキュリティルール。
 //
-// このアプリには認証がない（監督は URL を開くだけで書き込む）ので、
-// 『誰が書いたか』では守れない。代わりに『どこに・どんな形で書けるか』を絞る。
+// 二段構えで守る。
 //
-//   - ルート直下と、知らないパスへの書き込みを一切拒否する
-//   - draft をまるごと置き換える／消すことを拒否する（過去にデータが消えた事故の形）
-//   - 監督（teams）と選手リスト（players）は削除できない
-//   - 各項目の型・長さ・範囲を検証し、壊れた値やゴミを弾く
+//   1. 書き込みはログイン必須（auth != null）。
+//      共有アカウントで進行役と監督だけがログインする。
+//      パスワードは Firebase が照合するので、ソースには残らない。
 //
-// 読み取りは配信の観戦者にも必要なので開けたまま。
-// 『正しい形の書き込み』は誰でもできる点は変わらないため、
-// 本当の意味での保護が必要になったら Firebase Authentication を入れること。
+//   2. ログインしていても、書ける場所と形は絞る。
+//      - ルート直下と、知らないパスへの書き込みを拒否する
+//      - draft をまるごと置き換える／消すことを拒否する（過去にデータが消えた事故の形）
+//      - 監督（teams）と選手リスト（players）は削除できない
+//      - 各項目の型・長さ・範囲を検証し、壊れた値やゴミを弾く
+//
+// 読み取りは配信の観戦者（?view=1）と OBS（?obs=1）に必要なので開けたまま。
+// 配信で映る情報なので、隠す意味もない。
 //
 
   "rules": {
@@ -23,12 +26,12 @@
       ".write": false,
 
       "currentRound": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 20"
       },
 
       "teams": {
-        ".write": "newData.exists()",
+        ".write": "auth != null && newData.exists()",
         ".validate": "newData.hasChildren()",
         "$teamId": {
           ".validate": "$teamId.matches(/^team[0-9]{1,3}$/)",
@@ -41,12 +44,12 @@
       },
 
       "players": {
-        ".write": "newData.exists()",
+        ".write": "auth != null && newData.exists()",
         ".validate": "newData.isString() && newData.val().length <= 8000"
       },
 
       "roulette": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.isString() && newData.val().length <= 2000"
       },
 
@@ -54,25 +57,25 @@
         ".write": false,
 
         "totalRounds": {
-          ".write": true,
+          ".write": "auth != null",
           ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 20"
         },
         "hidePicks": {
-          ".write": true,
+          ".write": "auth != null",
           ".validate": "newData.isBoolean()"
         },
         "revealed": {
-          ".write": true,
+          ".write": "auth != null",
           "$round": { ".validate": "$round.matches(/^round[0-9]{1,2}$/) && newData.isBoolean()" }
         },
         "allIn": {
-          ".write": true,
+          ".write": "auth != null",
           "$round": { ".validate": "$round.matches(/^round[0-9]{1,2}$/) && newData.isBoolean()" }
         }
       },
 
       "nominations": {
-        ".write": true,
+        ".write": "auth != null",
         "$round": {
           ".validate": "$round.matches(/^round[0-9]{1,2}$/)",
           "$teamId": {
@@ -100,7 +103,7 @@
       },
 
       "lottery": {
-        ".write": true,
+        ".write": "auth != null",
         "$round": {
           ".validate": "$round.matches(/^round[0-9]{1,2}$/)",
           "$key": {
@@ -116,7 +119,7 @@
       },
 
       "rouletteLog": {
-        ".write": true,
+        ".write": "auth != null",
         "$round": {
           ".validate": "$round.matches(/^round[0-9]{1,2}$/)",
           "$teamId": {
@@ -139,7 +142,7 @@
       ".write": false,
 
       "showdown": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['id', 'packet'])",
         "id": { ".validate": "newData.isString() && newData.val().length <= 40" },
         "at": { ".validate": "newData.isNumber()" },
@@ -148,7 +151,7 @@
       },
 
       "roulette": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['id', 'items'])",
         "id": { ".validate": "newData.isString() && newData.val().length <= 40" },
         "at": { ".validate": "newData.isNumber()" },
